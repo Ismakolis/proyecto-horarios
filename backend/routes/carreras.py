@@ -11,7 +11,7 @@ from schemas.carreras import (
 from services.carreras_service import (
     crear_carrera, listar_carreras, obtener_carrera,
     actualizar_carrera, eliminar_carrera, agregar_nivel, actualizar_nivel,
-    crear_asignatura, listar_asignaturas, actualizar_asignatura
+    crear_asignatura, listar_asignaturas, actualizar_asignatura, copiar_malla
 )
 from utils.jwt import solo_coordinador, cualquier_rol
 from models.models import Usuario, Nivel
@@ -119,3 +119,13 @@ async def actualizar_nivel_route(
 ):
     """Actualizar paralelos matutina/nocturna de un nivel"""
     return await actualizar_nivel(carrera_id, nivel_id, data, db)
+
+@router.post("/{carrera_id}/copiar-malla/{origen_id}")
+async def copiar_malla_route(
+    carrera_id: str,
+    origen_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: Usuario = Depends(solo_coordinador),
+):
+    """Copia todas las asignaturas de la carrera origen a esta carrera. Util para replicar entre sedes."""
+    return await copiar_malla(origen_id, carrera_id, db)

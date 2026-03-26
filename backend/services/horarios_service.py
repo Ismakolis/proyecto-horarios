@@ -365,6 +365,59 @@ async def generar_horarios_automatico(data: GenerarHorarioRequest, db: AsyncSess
         "errores": errores
     }
 
+
+# ─── GENERACIÓN PARA TODAS LAS SEDES ─────────────────────────────────────────
+
+async def generar_horarios_todas_sedes(data, db: AsyncSession) -> dict:
+    """
+    Genera horarios para todas las sedes de una carrera por nombre.
+    Los docentes se reparten entre sedes respetando el límite global de 3 asignaturas por módulo.
+    """
+    # Buscar todas las carreras con ese nombre
+    from sqlalchemy import func as sqlfunc
+    r = await db.execute(
+        select(Carrera).where(
+            and_(
+                sqlfunc.lower(Carrera.nombre) == data.carrera_nombre.lower(),
+                Carrera.activo == True
+            )
+        )
+    )
+    sedes = r.scalars().all()
+
+    if not sedes:
+        raise HTTPException(status_code=404, detail=f"No se encontró ninguna carrera con nombre '{data.carrera_nombre}'")
+
+    total_creados = 0
+    total_errores = []
+
+    for sede in sorted(sedes, key=lambda c: c.sede or 'Quito'):
+        # Crear una copia del request con el ID de esta sede
+        from schemas.horarios import GenerarHorarioRequest
+        data_sede = GenerarHorarioRequest(
+            periodo_id=data.periodo_id,
+            modulo_id=data.modulo_id,
+            carrera_id=sede.id,
+            usar_ia=data.usar_ia,
+        )
+
+        if data.usar_ia:
+            resultado = await generar_horarios_con_ia(data_sede, db)
+        else:
+            resultado = await generar_horarios_automatico(data_sede, db)
+
+        total_creados += resultado.get("creados", 0)
+        errores_sede = resultado.get("errores", [])
+        if errores_sede:
+            total_errores.extend([f"[{sede.sede or 'Quito'}] {e}" for e in errores_sede])
+
+    return {
+        "mensaje": f"Generacion completada para todas las sedes: {total_creados} horarios creados",
+        "creados": total_creados,
+        "errores": total_errores,
+    }
+
+
 # ─── GENERACIÓN CON IA ────────────────────────────────────────────────────────
 
 async def _construir_contexto_ia(data, modulo, db: AsyncSession) -> dict:

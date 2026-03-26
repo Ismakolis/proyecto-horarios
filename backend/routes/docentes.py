@@ -1,87 +1,87 @@
+"""
+routes/docentes.py
+Endpoints de docentes, acceso de usuarios y habilidades.
+"""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 from database import get_db
-from schemas.docentes import DocenteCreate, DocenteUpdate, DocenteResponse, DocenteListResponse, DisponibilidadBase
+from schemas.docentes import (
+    DocenteCreate, DocenteUpdate, DocenteResponse, DocenteListResponse,
+    CrearAccesoDocente, HabilidadDocenteCreate
+)
 from services.docentes_service import (
     crear_docente, listar_docentes, obtener_docente,
-    actualizar_docente, eliminar_docente, actualizar_disponibilidad
+    actualizar_docente, crear_acceso_docente,
+    obtener_habilidades, actualizar_habilidades
 )
-from utils.jwt import solo_coordinador, coordinador_o_admin, cualquier_rol
-from models.models import Usuario, RolUsuario
+from utils.jwt import solo_coordinador, cualquier_rol
+from models.models import Usuario
 
 router = APIRouter()
 
 
-@router.post("/", response_model=DocenteResponse, status_code=201)
+@router.post("/", status_code=201)
 async def crear(
     data: DocenteCreate,
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(solo_coordinador),
 ):
-    """Crear un nuevo docente (solo coordinador)"""
     return await crear_docente(data, db)
 
 
-@router.get("/", response_model=List[DocenteListResponse])
+@router.get("/")
 async def listar(
-    activo: Optional[bool] = Query(None, description="Filtrar por estado activo/inactivo"),
+    activo: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(cualquier_rol),
 ):
-    """Listar todos los docentes"""
     return await listar_docentes(db, activo)
 
 
-@router.get("/{docente_id}", response_model=DocenteResponse)
+@router.get("/{docente_id}")
 async def obtener(
     docente_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(cualquier_rol),
+    _: Usuario = Depends(cualquier_rol),
 ):
-    """
-    Obtener un docente por ID.
-    Los docentes solo pueden ver su propio perfil.
-    """
-    from models import RolUsuario
-    # Si es docente, verificar que sea su propio perfil
-    if current_user.rol == RolUsuario.DOCENTE:
-        if not current_user.docente or current_user.docente.id != docente_id:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=403, detail="Solo puedes ver tu propio perfil")
     return await obtener_docente(docente_id, db)
 
 
-@router.put("/{docente_id}", response_model=DocenteResponse)
+@router.put("/{docente_id}")
 async def actualizar(
     docente_id: str,
     data: DocenteUpdate,
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(solo_coordinador),
 ):
-    """Actualizar datos de un docente (solo coordinador)"""
     return await actualizar_docente(docente_id, data, db)
 
 
-@router.delete("/{docente_id}")
-async def eliminar(
-    docente_id: str,
+@router.post("/crear-acceso", status_code=201)
+async def crear_acceso(
+    data: CrearAccesoDocente,
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(solo_coordinador),
 ):
-    """Desactivar un docente (soft delete, solo coordinador)"""
-    return await eliminar_docente(docente_id, db)
+    """Crea usuario y contrasena para que el docente pueda iniciar sesion."""
+    return await crear_acceso_docente(data, db)
 
 
-@router.put("/{docente_id}/disponibilidad")
-async def set_disponibilidad(
+@router.get("/{docente_id}/habilidades")
+async def get_habilidades(
     docente_id: str,
-    disponibilidades: List[DisponibilidadBase],
+    db: AsyncSession = Depends(get_db),
+    _: Usuario = Depends(cualquier_rol),
+):
+    return await obtener_habilidades(docente_id, db)
+
+
+@router.put("/{docente_id}/habilidades")
+async def set_habilidades(
+    docente_id: str,
+    data: HabilidadDocenteCreate,
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(solo_coordinador),
 ):
-    """
-    Reemplazar completamente la disponibilidad de un docente.
-    Enviar lista vacía [] para borrar toda disponibilidad.
-    """
-    return await actualizar_disponibilidad(docente_id, disponibilidades, db)
+    return await actualizar_habilidades(docente_id, data, db)

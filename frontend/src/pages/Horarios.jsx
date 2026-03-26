@@ -5,9 +5,10 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   getHorarios, generarHorarios, deleteHorario,
-  getCarreras, getPeriodos, exportarExcel,
+  getCarreras, getPeriodos,
   getDocentes, getAsignaturas, updateHorario
 } from '../services/api'
 
@@ -175,6 +176,7 @@ export default function Horarios() {
   const [error, setError]               = useState('')
   const [exito, setExito]               = useState('')
   const [resultado, setResultado]       = useState(null)
+  const navigate = useNavigate()
 
   // Filtros de visualizacion
   const [filtros, setFiltros]           = useState({ periodo_id: '', modulo_id: '', carrera_id: '' })
@@ -270,10 +272,11 @@ export default function Horarios() {
     setError('')
     try {
       const res = await generarHorarios({
-        periodo_id: formGenerar.periodo_id,
-        modulo_id:  formGenerar.modulo_id,
-        carrera_id: formGenerar.carrera_id,
-        usar_ia:    formGenerar.usar_ia,
+        periodo_id:    formGenerar.periodo_id,
+        modulo_id:     formGenerar.modulo_id,
+        carrera_id:    formGenerar.carrera_id,
+        carrera_nombre: formGenerar.carrera_id, // enviamos el nombre para buscar todas las sedes
+        usar_ia:       formGenerar.usar_ia,
       })
       setResultado(res.data)
       cargarHorarios()
@@ -316,25 +319,7 @@ export default function Horarios() {
     }
   }
 
-  /**
-   * Descarga el reporte Excel del periodo seleccionado.
-   */
-  const descargarExcel = async () => {
-    if (!filtros.periodo_id) { setError('Selecciona un periodo para exportar'); return }
-    try {
-      const res = await exportarExcel(filtros.periodo_id)
-      const url = window.URL.createObjectURL(new Blob([res.data]))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `horarios_${filtros.periodo_id}.xlsx`
-      a.click()
-      window.URL.revokeObjectURL(url)
-      setExito('Reporte Excel descargado')
-      setTimeout(() => setExito(''), 3000)
-    } catch {
-      setError('Selecciona un periodo primero')
-    }
-  }
+  // Exportacion movida a pagina de Reportes
 
   /**
    * Abre el modal de edicion con los datos del horario seleccionado.
@@ -413,8 +398,8 @@ export default function Horarios() {
               Limpiar modulo
             </button>
           )}
-          <button className="btn btn-success" onClick={descargarExcel}>
-            Exportar Excel
+          <button className="btn btn-success" onClick={() => navigate('/reportes')}>
+            Ver Reportes
           </button>
           <button className="btn btn-primary" onClick={() => { setResultado(null); setError(''); setModalGenerar(true) }}>
             Generar horarios
@@ -451,7 +436,11 @@ export default function Horarios() {
             <label>Carrera</label>
             <select value={filtros.carrera_id} onChange={e => setFiltros({ ...filtros, carrera_id: e.target.value })}>
               <option value="">Todas las carreras</option>
-              {carreras.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              {carreras.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} — {c.sede || 'Quito'}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -567,9 +556,16 @@ export default function Horarios() {
                   <label>Carrera</label>
                   <select value={formGenerar.carrera_id} onChange={e => setFormGenerar({ ...formGenerar, carrera_id: e.target.value })}>
                     <option value="">Seleccionar carrera...</option>
-                    {carreras.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    {carreras
+                      .filter((c, idx, arr) => arr.findIndex(x => x.nombre.toLowerCase() === c.nombre.toLowerCase()) === idx)
+                      .map(c => <option key={c.id} value={c.nombre.toLowerCase()}>{c.nombre}</option>)}
                   </select>
                 </div>
+                {formGenerar.carrera_id && (
+                  <div className="alert alert-info" style={{ fontSize: 12 }}>
+                    Se generaran horarios para todas las sedes de esta carrera distribuyendo los docentes entre ellas.
+                  </div>
+                )}
                 {/* Toggle de IA */}
                 <div style={{
                   background: formGenerar.usar_ia ? '#f0f9ff' : '#f8fafc',
@@ -653,20 +649,7 @@ export default function Horarios() {
               </select>
             </div>
 
-            <div className="form-row">
-              {/* Dia */}
-              <div className="form-group">
-                <label>Dia de la semana</label>
-                <select value={formEditar.dia} onChange={e => setFormEditar({ ...formEditar, dia: e.target.value })}>
-                  <option value="">Seleccionar dia...</option>
-                  {DIAS_OPTIONS.map(d => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Jornada */}
-              <div className="form-group">
+            <div className="form-group">
                 <label>Jornada</label>
                 <select
                   value={formEditar.jornada}
@@ -677,7 +660,6 @@ export default function Horarios() {
                   <option value="nocturna">Nocturna (18:30 - 21:30)</option>
                 </select>
               </div>
-            </div>
 
             <div className="form-row">
               {/* Hora inicio */}

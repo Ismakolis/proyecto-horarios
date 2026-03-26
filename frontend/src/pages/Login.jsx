@@ -25,7 +25,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault()
     if (!email || !password) {
-      setError('Ingresa tu email y contrasena')
+      setError('Ingresa tu email y contraseña')
       return
     }
     setCargando(true)
@@ -68,12 +68,12 @@ export default function Login() {
           </div>
 
           <div className="form-group">
-            <label>Contrasena</label>
+            <label>Contraseña</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Ingresa tu contrasena"
+              placeholder="Ingresa tu contraseña"
               autoComplete="current-password"
             />
           </div>

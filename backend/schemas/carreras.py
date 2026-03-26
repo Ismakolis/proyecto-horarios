@@ -1,5 +1,5 @@
 import re
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import Optional, List
 
 
@@ -8,6 +8,7 @@ class NivelCreate(BaseModel):
     nombre: Optional[str] = None
     paralelos_matutina: int = 1
     paralelos_nocturna: int = 1
+    jornada_habilitada: str = "ambas"
 
     @field_validator("numero")
     @classmethod
@@ -23,10 +24,18 @@ class NivelCreate(BaseModel):
             raise ValueError("Los paralelos deben estar entre 0 y 10")
         return v
 
+    @field_validator("jornada_habilitada")
+    @classmethod
+    def jornada_valida(cls, v):
+        if v not in ["matutina", "nocturna", "ambas"]:
+            raise ValueError("La jornada debe ser: matutina, nocturna o ambas")
+        return v
+
 
 class NivelUpdate(BaseModel):
     paralelos_matutina: Optional[int] = None
     paralelos_nocturna: Optional[int] = None
+    jornada_habilitada: Optional[str] = None
 
     @field_validator("paralelos_matutina", "paralelos_nocturna")
     @classmethod
@@ -37,6 +46,15 @@ class NivelUpdate(BaseModel):
             raise ValueError("Los paralelos deben estar entre 0 y 10")
         return v
 
+    @field_validator("jornada_habilitada")
+    @classmethod
+    def jornada_valida(cls, v):
+        if v is None:
+            return v
+        if v not in ["matutina", "nocturna", "ambas"]:
+            raise ValueError("La jornada debe ser: matutina, nocturna o ambas")
+        return v
+
 
 class NivelResponse(BaseModel):
     id: str
@@ -44,6 +62,7 @@ class NivelResponse(BaseModel):
     nombre: Optional[str]
     paralelos_matutina: int
     paralelos_nocturna: int
+    jornada_habilitada: str
     carrera_id: str
 
     model_config = {"from_attributes": True}
@@ -52,6 +71,7 @@ class NivelResponse(BaseModel):
 class CarreraCreate(BaseModel):
     nombre: str
     codigo: str
+    sede: str = "Quito"
     descripcion: Optional[str] = None
     niveles: Optional[List[NivelCreate]] = []
 
@@ -60,11 +80,11 @@ class CarreraCreate(BaseModel):
     def nombre_valido(cls, v):
         v = v.strip()
         if len(v) < 3:
-            raise ValueError("El nombre de la carrera debe tener al menos 3 caracteres")
+            raise ValueError("El nombre debe tener al menos 3 caracteres")
         if len(v) > 150:
             raise ValueError("El nombre no puede superar los 150 caracteres")
         if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-\.\(\)0-9]+$", v):
-            raise ValueError("El nombre de la carrera contiene caracteres no permitidos")
+            raise ValueError("El nombre contiene caracteres no permitidos")
         return v
 
     @field_validator("codigo")
@@ -76,23 +96,22 @@ class CarreraCreate(BaseModel):
         if len(v) > 20:
             raise ValueError("El codigo no puede superar los 20 caracteres")
         if not re.match(r"^[A-Z0-9\-_]+$", v):
-            raise ValueError("El codigo solo puede contener letras mayusculas, numeros, guiones y guiones bajos")
+            raise ValueError("El codigo solo puede contener letras mayusculas, numeros y guiones")
         return v
 
-    @field_validator("descripcion")
+    @field_validator("sede")
     @classmethod
-    def descripcion_valida(cls, v):
-        if v is None:
-            return v
+    def sede_valida(cls, v):
         v = v.strip()
-        if len(v) > 500:
-            raise ValueError("La descripcion no puede superar los 500 caracteres")
+        if len(v) < 2:
+            raise ValueError("La sede debe tener al menos 2 caracteres")
         return v
 
 
 class CarreraUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
+    sede: Optional[str] = None
     activo: Optional[bool] = None
 
     @field_validator("nombre")
@@ -102,9 +121,7 @@ class CarreraUpdate(BaseModel):
             return v
         v = v.strip()
         if len(v) < 3:
-            raise ValueError("El nombre de la carrera debe tener al menos 3 caracteres")
-        if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-\.\(\)0-9]+$", v):
-            raise ValueError("El nombre de la carrera contiene caracteres no permitidos")
+            raise ValueError("El nombre debe tener al menos 3 caracteres")
         return v
 
 
@@ -112,6 +129,7 @@ class CarreraResponse(BaseModel):
     id: str
     nombre: str
     codigo: str
+    sede: str
     descripcion: Optional[str]
     activo: bool
     niveles: List[NivelResponse] = []
@@ -123,6 +141,7 @@ class CarreraListResponse(BaseModel):
     id: str
     nombre: str
     codigo: str
+    sede: str
     activo: bool
 
     model_config = {"from_attributes": True}
@@ -132,6 +151,7 @@ class CarreraConNivelesResponse(BaseModel):
     id: str
     nombre: str
     codigo: str
+    sede: str
     descripcion: Optional[str] = None
     activo: bool
     niveles: List[NivelResponse] = []
@@ -152,11 +172,11 @@ class AsignaturaCreate(BaseModel):
     def nombre_valido(cls, v):
         v = v.strip()
         if len(v) < 2:
-            raise ValueError("El nombre de la asignatura debe tener al menos 2 caracteres")
+            raise ValueError("El nombre debe tener al menos 2 caracteres")
         if len(v) > 150:
             raise ValueError("El nombre no puede superar los 150 caracteres")
         if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-\.\(\)0-9,/]+$", v):
-            raise ValueError("El nombre de la asignatura contiene caracteres no permitidos")
+            raise ValueError("El nombre contiene caracteres no permitidos")
         return v
 
     @field_validator("codigo")
@@ -167,8 +187,6 @@ class AsignaturaCreate(BaseModel):
         v = v.strip().upper()
         if len(v) > 20:
             raise ValueError("El codigo no puede superar los 20 caracteres")
-        if not re.match(r"^[A-Z0-9\-_]+$", v):
-            raise ValueError("El codigo solo puede contener letras mayusculas, numeros y guiones")
         return v
 
     @field_validator("numero_modulo")
@@ -184,7 +202,7 @@ class AsignaturaCreate(BaseModel):
         if v <= 0:
             raise ValueError("Las horas deben ser mayores a 0")
         if v > 500:
-            raise ValueError("Las horas del modulo no pueden superar 500")
+            raise ValueError("Las horas no pueden superar 500")
         return v
 
 
@@ -193,17 +211,6 @@ class AsignaturaUpdate(BaseModel):
     horas_semanales: Optional[float] = None
     horas_modulo: Optional[float] = None
     activo: Optional[bool] = None
-
-    @field_validator("horas_modulo", "horas_semanales")
-    @classmethod
-    def horas_validas(cls, v):
-        if v is None:
-            return v
-        if v <= 0:
-            raise ValueError("Las horas deben ser mayores a 0")
-        if v > 500:
-            raise ValueError("Las horas no pueden superar 500")
-        return v
 
 
 class AsignaturaResponse(BaseModel):

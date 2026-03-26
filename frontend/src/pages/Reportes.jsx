@@ -93,7 +93,9 @@ export default function Reportes() {
             <label>Carrera</label>
             <select value={carreraId} onChange={e => { setCarreraId(e.target.value); setNivelId(''); setBusquedaDocente('') }}>
               <option value="">Seleccionar carrera...</option>
-              {carreras.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              {carreras
+                .filter((c, idx, arr) => arr.findIndex(x => x.nombre.toLowerCase() === c.nombre.toLowerCase()) === idx)
+                .map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </select>
           </div>
         </div>

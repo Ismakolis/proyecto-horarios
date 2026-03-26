@@ -56,13 +56,19 @@ async def exportar_excel_carrera(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(coordinador_o_admin),
 ):
-    """Excel con horarios por carrera + carga horaria"""
+    """Excel con horarios por carrera incluyendo todas las sedes + carga horaria"""
     try:
+        from sqlalchemy import select
+        from models.models import Carrera
+        r = await db.execute(select(Carrera).where(Carrera.id == carrera_id))
+        carrera = r.scalar_one_or_none()
+        nombre_archivo = carrera.nombre.replace(' ', '_') if carrera else carrera_id
+
         contenido = await generar_excel_por_carrera(periodo_id, carrera_id, db)
         return StreamingResponse(
             io.BytesIO(contenido),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=horario_carrera_{carrera_id}.xlsx"}
+            headers={"Content-Disposition": f"attachment; filename=horario_{nombre_archivo}_todas_sedes.xlsx"}
         )
     except Exception as e:
         from fastapi import HTTPException

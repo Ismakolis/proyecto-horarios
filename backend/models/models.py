@@ -66,15 +66,20 @@ class Carrera(Base):
     __tablename__ = "carreras"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    nombre = Column(String(150), nullable=False, unique=True)
+    nombre = Column(String(150), nullable=False)
     codigo = Column(String(20), nullable=False, unique=True)
     descripcion = Column(Text, nullable=True)
+    sede = Column(String(50), nullable=False, default="Quito")  # Quito, Conocoto, etc.
     activo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relaciones
     niveles = relationship("Nivel", back_populates="carrera", cascade="all, delete-orphan")
     asignaturas = relationship("Asignatura", back_populates="carrera")
+
+    __table_args__ = (
+        UniqueConstraint("nombre", "sede", name="uq_carrera_nombre_sede"),
+    )
 
     def __repr__(self):
         return f"<Carrera {self.codigo} - {self.nombre}>"
@@ -90,8 +95,10 @@ class Nivel(Base):
     carrera_id = Column(String, ForeignKey("carreras.id"), nullable=False)
     numero = Column(Integer, nullable=False)  # 1, 2, 3...
     nombre = Column(String(50), nullable=True)  # "Primer Nivel", etc.
-    paralelos_matutina = Column(Integer, nullable=False, default=1)  # paralelos en jornada matutina
-    paralelos_nocturna = Column(Integer, nullable=False, default=1)  # paralelos en jornada nocturna
+    paralelos_matutina = Column(Integer, nullable=False, default=1)
+    paralelos_nocturna = Column(Integer, nullable=False, default=1)
+    jornada_habilitada = Column(String(10), nullable=False, default="ambas")  # matutina, nocturna, ambas
+    jornada_habilitada = Column(String(10), nullable=False, default="ambas")  # matutina, nocturna, ambas
 
     # Relaciones
     carrera = relationship("Carrera", back_populates="niveles")

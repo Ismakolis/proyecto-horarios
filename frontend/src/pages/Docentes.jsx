@@ -1,175 +1,158 @@
 /**
  * Docentes.jsx
- * Gestion de docentes y disponibilidad horaria.
- * Incluye validaciones de frontend antes de enviar al backend.
+ * Gestion de docentes, acceso al sistema y habilidades.
  */
-
 import { useEffect, useState } from 'react'
-import { getDocentes, createDocente, updateDocente, deleteDocente } from '../services/api'
+import {
+  getDocentes, createDocente, updateDocente,
+  crearAccesoDocente, getHabilidades, updateHabilidades,
+  getAsignaturas
+} from '../services/api'
 
-const DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
-const JORNADAS = ['matutina', 'nocturna']
-
-const formInicial = {
-  cedula: '', nombre: '', apellido: '', email: '',
-  tipo: 'tiempo_completo', titulo: '',
-  disponibilidades: []
-}
-
-// Regex para validar que un campo solo tenga letras, espacios y guiones
 const SOLO_LETRAS = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-']+$/
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const formInicial = {
+  cedula: '', nombre: '', apellido: '',
+  email: '', tipo: 'tiempo_completo', titulo: ''
+}
+
 export default function Docentes() {
-  const [docentes, setDocentes]   = useState([])
-  const [cargando, setCargando]   = useState(true)
-  const [modal, setModal]         = useState(false)
-  const [editando, setEditando]   = useState(null)
-  const [form, setForm]           = useState(formInicial)
-  const [error, setError]         = useState('')
-  const [exito, setExito]         = useState('')
-  const [guardando, setGuardando] = useState(false)
+  const [docentes, setDocentes]             = useState([])
+  const [cargando, setCargando]             = useState(true)
+  const [modal, setModal]                   = useState(false)
+  const [modalAcceso, setModalAcceso]       = useState(false)
+  const [modalHabilidades, setModalHabilidades] = useState(false)
+  const [editando, setEditando]             = useState(null)
+  const [docenteSeleccionado, setDocenteSeleccionado] = useState(null)
+  const [form, setForm]                     = useState(formInicial)
+  const [password, setPassword]             = useState('')
+  const [todasAsignaturas, setTodasAsignaturas] = useState([])
+  const [seleccionadas, setSeleccionadas]   = useState([])
+  const [error, setError]                   = useState('')
+  const [exito, setExito]                   = useState('')
+  const [guardando, setGuardando]           = useState(false)
 
   const cargar = async () => {
     try {
       const res = await getDocentes()
       setDocentes(res.data)
-    } catch {
-      setError('Error al cargar docentes')
-    } finally {
-      setCargando(false)
-    }
+    } catch { setError('Error al cargar docentes') }
+    finally { setCargando(false) }
   }
 
   useEffect(() => { cargar() }, [])
 
   const abrirCrear = () => {
-    setEditando(null)
-    setForm(formInicial)
-    setError('')
-    setModal(true)
+    setEditando(null); setForm(formInicial); setError(''); setModal(true)
   }
 
   const abrirEditar = (doc) => {
     setEditando(doc)
     setForm({
-      cedula: doc.cedula,
-      nombre: doc.nombre,
-      apellido: doc.apellido,
-      email: doc.email,
-      tipo: doc.tipo,
-      titulo: doc.titulo || '',
-      disponibilidades: []
+      cedula: doc.cedula, nombre: doc.nombre,
+      apellido: doc.apellido, email: doc.email,
+      tipo: doc.tipo, titulo: doc.titulo || '',
+      activo: doc.activo,
     })
-    setError('')
-    setModal(true)
+    setError(''); setModal(true)
   }
 
-  const toggleDisponibilidad = (dia, jornada) => {
-    const existe = form.disponibilidades.find(d => d.dia === dia && d.jornada === jornada)
-    if (existe) {
-      setForm({ ...form, disponibilidades: form.disponibilidades.filter(d => !(d.dia === dia && d.jornada === jornada)) })
-    } else {
-      setForm({ ...form, disponibilidades: [...form.disponibilidades, { dia, jornada, disponible: true }] })
-    }
+  const abrirAcceso = (doc) => {
+    setDocenteSeleccionado(doc); setPassword(''); setError(''); setModalAcceso(true)
   }
 
-  const estaSeleccionado = (dia, jornada) =>
-    form.disponibilidades.some(d => d.dia === dia && d.jornada === jornada)
+  const abrirHabilidades = async (doc) => {
+    setDocenteSeleccionado(doc); setError('')
+    try {
+      const [habs, asigs] = await Promise.all([
+        getHabilidades(doc.id),
+        getAsignaturas()
+      ])
+      setTodasAsignaturas(asigs.data)
+      setSeleccionadas(habs.data.map(h => h.asignatura_id))
+      setModalHabilidades(true)
+    } catch { setError('Error al cargar habilidades') }
+  }
 
-  // Validacion de formulario antes de enviar al backend
   const validar = () => {
-    const nombre   = form.nombre.trim()
-    const apellido = form.apellido.trim()
-    const email    = form.email.trim()
-    const cedula   = form.cedula.trim()
-
-    if (!nombre) return 'El nombre es obligatorio'
-    if (nombre.length < 2) return 'El nombre debe tener al menos 2 caracteres'
-    if (!SOLO_LETRAS.test(nombre)) return 'El nombre solo puede contener letras, espacios y guiones'
-
-    if (!apellido) return 'El apellido es obligatorio'
-    if (apellido.length < 2) return 'El apellido debe tener al menos 2 caracteres'
-    if (!SOLO_LETRAS.test(apellido)) return 'El apellido solo puede contener letras, espacios y guiones'
-
-    if (!email) return 'El email es obligatorio'
-    if (!EMAIL_REGEX.test(email)) return 'El email no tiene un formato valido'
-
-    if (!editando) {
-      if (!cedula) return 'La cedula es obligatoria'
-      if (!/^\d{10}$/.test(cedula)) return 'La cedula debe tener exactamente 10 digitos numericos'
-    }
-
-    if (form.titulo) {
-      const titulo = form.titulo.trim()
-      if (titulo.length > 200) return 'El titulo no puede superar los 200 caracteres'
-    }
-
-    return null // sin errores
+    const n = form.nombre.trim(), a = form.apellido.trim(), e = form.email.trim()
+    if (!n) return 'El nombre es obligatorio'
+    if (!SOLO_LETRAS.test(n)) return 'El nombre solo puede contener letras'
+    if (!a) return 'El apellido es obligatorio'
+    if (!SOLO_LETRAS.test(a)) return 'El apellido solo puede contener letras'
+    if (!e) return 'El email es obligatorio'
+    if (!EMAIL_REGEX.test(e)) return 'El email no es valido'
+    if (!editando && !/^\d{10}$/.test(form.cedula.trim())) return 'La cedula debe tener 10 digitos'
+    return null
   }
 
   const guardar = async () => {
-    const errValidacion = validar()
-    if (errValidacion) { setError(errValidacion); return }
-
-    setGuardando(true)
-    setError('')
+    const err = validar()
+    if (err) { setError(err); return }
+    setGuardando(true); setError('')
     try {
       if (editando) {
         await updateDocente(editando.id, {
-          nombre:   form.nombre.trim(),
-          apellido: form.apellido.trim(),
-          email:    form.email.trim(),
-          tipo:     form.tipo,
-          titulo:   form.titulo.trim() || null,
+          nombre: form.nombre.trim(), apellido: form.apellido.trim(),
+          email: form.email.trim(), tipo: form.tipo,
+          titulo: form.titulo.trim() || null,
+          activo: form.activo,
         })
       } else {
         await createDocente({
-          ...form,
-          nombre:   form.nombre.trim(),
-          apellido: form.apellido.trim(),
-          email:    form.email.trim(),
-          cedula:   form.cedula.trim(),
-          titulo:   form.titulo.trim() || null,
+          cedula: form.cedula.trim(), nombre: form.nombre.trim(),
+          apellido: form.apellido.trim(), email: form.email.trim(),
+          tipo: form.tipo, titulo: form.titulo.trim() || null,
         })
       }
-      setExito(editando ? 'Docente actualizado correctamente' : 'Docente creado correctamente')
-      setModal(false)
-      cargar()
+      setExito(editando ? 'Docente actualizado' : 'Docente creado correctamente')
+      setModal(false); cargar()
       setTimeout(() => setExito(''), 3000)
-    } catch (err) {
-      const detail = err.response?.data?.detail
-      if (Array.isArray(detail)) {
-        setError(detail.map(e => e.msg).join(', '))
-      } else {
-        setError(detail || 'Error al guardar')
-      }
-    } finally {
-      setGuardando(false)
-    }
+    } catch (e) {
+      const d = e.response?.data?.detail
+      setError(Array.isArray(d) ? d.map(x => x.msg).join(', ') : (d || 'Error al guardar'))
+    } finally { setGuardando(false) }
   }
 
-  const desactivar = async (doc) => {
-    if (!confirm(`Desactivar a ${doc.nombre} ${doc.apellido}?`)) return
+  const guardarAcceso = async () => {
+    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    setGuardando(true); setError('')
     try {
-      await deleteDocente(doc.id)
-      setExito('Docente desactivado')
-      cargar()
+      await crearAccesoDocente({ docente_id: docenteSeleccionado.id, password })
+      setExito(`Acceso creado para ${docenteSeleccionado.nombre} ${docenteSeleccionado.apellido}`)
+      setModalAcceso(false); cargar()
       setTimeout(() => setExito(''), 3000)
-    } catch {
-      setError('Error al desactivar')
-    }
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Error al crear acceso')
+    } finally { setGuardando(false) }
   }
 
-  // Bloquear numeros en campos de texto de nombre/apellido
+  const guardarHabilidades = async () => {
+    setGuardando(true); setError('')
+    try {
+      await updateHabilidades(docenteSeleccionado.id, { asignatura_ids: seleccionadas })
+      setExito('Habilidades actualizadas')
+      setModalHabilidades(false); 
+      setTimeout(() => setExito(''), 3000)
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Error al guardar habilidades')
+    } finally { setGuardando(false) }
+  }
+
+  const toggleAsignatura = (id) => {
+    setSeleccionadas(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
   const soloLetras = (e) => {
-    const char = e.key
-    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-']+$/.test(char) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(char)) {
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-']$/.test(e.key) &&
+      !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
       e.preventDefault()
     }
   }
 
-  // Bloquear letras en campo de cedula
   const soloNumeros = (e) => {
     if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
       e.preventDefault()
@@ -181,30 +164,31 @@ export default function Docentes() {
       <div className="topbar">
         <div>
           <h1>Docentes</h1>
-          <p>Gestion de docentes y disponibilidad</p>
+          <p>Gestion de docentes, accesos y habilidades</p>
         </div>
         <button className="btn btn-primary" onClick={abrirCrear}>+ Nuevo docente</button>
       </div>
 
       {exito && <div className="alert alert-success">{exito}</div>}
-      {error && !modal && <div className="alert alert-error">{error}</div>}
+      {error && !modal && !modalAcceso && !modalHabilidades && <div className="alert alert-error">{error}</div>}
 
-      <div className="card">
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {cargando ? (
           <div className="loading">Cargando docentes...</div>
         ) : docentes.length === 0 ? (
           <div className="empty-state">
-            <p>No hay docentes registrados aun.</p>
+            <div className="empty-state-icon">👤</div>
+            <p>No hay docentes registrados</p>
           </div>
         ) : (
-          <div className="table-container">
+          <div className="table-container" style={{ border: 'none' }}>
             <table>
               <thead>
                 <tr>
-                  <th>Cedula</th>
-                  <th>Nombre</th>
-                  <th>Email</th>
+                  <th>Docente</th>
+                  <th>Cédula</th>
                   <th>Tipo</th>
+                  <th>Acceso</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -212,24 +196,54 @@ export default function Docentes() {
               <tbody>
                 {docentes.map(doc => (
                   <tr key={doc.id}>
-                    <td>{doc.cedula}</td>
-                    <td><strong>{doc.nombre} {doc.apellido}</strong></td>
-                    <td>{doc.email}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 34, height: 34, borderRadius: '50%',
+                          background: 'var(--rojo-claro)', color: 'var(--rojo-itq)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 700, fontSize: 12, flexShrink: 0,
+                        }}>
+                          {doc.nombre[0]}{doc.apellido[0]}
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--negro)' }}>
+                            {doc.nombre} {doc.apellido}
+                          </p>
+                          <p style={{ fontSize: 11, color: 'var(--gris-medio)' }}>{doc.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--gris-oscuro)' }}>{doc.cedula}</td>
                     <td>
                       <span className={`badge ${doc.tipo === 'tiempo_completo' ? 'badge-blue' : 'badge-yellow'}`}>
-                        {doc.tipo === 'tiempo_completo' ? 'Tiempo Completo' : 'Tiempo Parcial'}
+                        {doc.tipo === 'tiempo_completo' ? 'TC' : 'TP'}
                       </span>
+                    </td>
+                    <td>
+                      {doc.tiene_acceso ? (
+                        <span className="badge badge-green">Con acceso</span>
+                      ) : (
+                        <button className="btn btn-secondary btn-sm" onClick={() => abrirAcceso(doc)}>
+                          + Crear acceso
+                        </button>
+                      )}
                     </td>
                     <td>
                       <span className={`badge ${doc.activo ? 'badge-green' : 'badge-red'}`}>
                         {doc.activo ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn-secondary" onClick={() => abrirEditar(doc)}>Editar</button>
-                      {doc.activo && (
-                        <button className="btn btn-danger" onClick={() => desactivar(doc)}>Desactivar</button>
-                      )}
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => abrirEditar(doc)}>
+                          Editar
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => abrirHabilidades(doc)}
+                          title="Gestionar habilidades">
+                          Habilidades
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -239,109 +253,65 @@ export default function Docentes() {
         )}
       </div>
 
+      {/* ── MODAL CREAR/EDITAR DOCENTE ── */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div className="modal">
             <div className="modal-header">
               <h2>{editando ? 'Editar docente' : 'Nuevo docente'}</h2>
-              <button className="modal-close" onClick={() => setModal(false)}>x</button>
+              <button className="modal-close" onClick={() => setModal(false)}>×</button>
             </div>
-
             {error && <div className="alert alert-error">{error}</div>}
 
             <div className="form-row">
               <div className="form-group">
                 <label>Nombre *</label>
-                <input
-                  value={form.nombre}
-                  onChange={e => setForm({...form, nombre: e.target.value})}
-                  onKeyDown={soloLetras}
-                  placeholder="Juan"
-                  maxLength={100}
-                />
+                <input value={form.nombre} onKeyDown={soloLetras} maxLength={100}
+                  onChange={e => setForm({...form, nombre: e.target.value})} placeholder="Juan" />
               </div>
               <div className="form-group">
                 <label>Apellido *</label>
-                <input
-                  value={form.apellido}
-                  onChange={e => setForm({...form, apellido: e.target.value})}
-                  onKeyDown={soloLetras}
-                  placeholder="Perez"
-                  maxLength={100}
-                />
+                <input value={form.apellido} onKeyDown={soloLetras} maxLength={100}
+                  onChange={e => setForm({...form, apellido: e.target.value})} placeholder="Perez" />
               </div>
             </div>
 
             {!editando && (
               <div className="form-group">
-                <label>Cedula * (10 digitos)</label>
-                <input
-                  value={form.cedula}
-                  onChange={e => setForm({...form, cedula: e.target.value})}
-                  onKeyDown={soloNumeros}
-                  placeholder="1234567890"
-                  maxLength={10}
-                  inputMode="numeric"
-                />
+                <label>Cédula * (10 dígitos)</label>
+                <input value={form.cedula} onKeyDown={soloNumeros} maxLength={10} inputMode="numeric"
+                  onChange={e => setForm({...form, cedula: e.target.value})} placeholder="1234567890" />
               </div>
             )}
 
             <div className="form-group">
               <label>Email *</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={e => setForm({...form, email: e.target.value})}
-                placeholder="docente@itq.edu.ec"
-              />
+              <input type="email" value={form.email}
+                onChange={e => setForm({...form, email: e.target.value})} placeholder="docente@itq.edu.ec" />
             </div>
 
             <div className="form-row">
               <div className="form-group">
                 <label>Tipo</label>
                 <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
-                  <option value="tiempo_completo">Tiempo Completo</option>
-                  <option value="tiempo_parcial">Tiempo Parcial</option>
+                  <option value="tiempo_completo">Tiempo Completo (TC)</option>
+                  <option value="tiempo_parcial">Tiempo Parcial (TP)</option>
                 </select>
               </div>
               <div className="form-group">
                 <label>Titulo (opcional)</label>
-                <input
-                  value={form.titulo}
-                  onChange={e => setForm({...form, titulo: e.target.value})}
-                  placeholder="Ing. en Sistemas"
-                  maxLength={200}
-                />
+                <input value={form.titulo} maxLength={200}
+                  onChange={e => setForm({...form, titulo: e.target.value})} placeholder="Ing. en Sistemas" />
               </div>
             </div>
 
-            {!editando && (
+            {editando && (
               <div className="form-group">
-                <label>Disponibilidad</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
-                  {DIAS.map(dia =>
-                    JORNADAS.map(jornada => (
-                      <button
-                        key={`${dia}-${jornada}`}
-                        type="button"
-                        onClick={() => toggleDisponibilidad(dia, jornada)}
-                        style={{
-                          padding: '6px 4px',
-                          borderRadius: 6,
-                          border: '1.5px solid',
-                          fontSize: 11,
-                          cursor: 'pointer',
-                          borderColor: estaSeleccionado(dia, jornada) ? 'var(--rojo-itq)' : '#e5e7eb',
-                          background: estaSeleccionado(dia, jornada) ? '#fee2e2' : '#fff',
-                          color: estaSeleccionado(dia, jornada) ? 'var(--rojo-itq)' : '#666',
-                          fontWeight: estaSeleccionado(dia, jornada) ? 700 : 400,
-                        }}
-                      >
-                        {dia.slice(0, 3)} {jornada.slice(0, 3)}
-                      </button>
-                    ))
-                  )}
-                </div>
+                <label>Estado</label>
+                <select value={form.activo} onChange={e => setForm({...form, activo: e.target.value === 'true'})}>
+                  <option value="true">Activo</option>
+                  <option value="false">Inactivo</option>
+                </select>
               </div>
             )}
 
@@ -349,6 +319,118 @@ export default function Docentes() {
               <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={guardar} disabled={guardando}>
                 {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL CREAR ACCESO ── */}
+      {modalAcceso && docenteSeleccionado && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAcceso(false)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h2>Crear acceso al sistema</h2>
+              <button className="modal-close" onClick={() => setModalAcceso(false)}>×</button>
+            </div>
+            {error && <div className="alert alert-error">{error}</div>}
+
+            <div style={{ background: 'var(--gris-claro)', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, fontSize: 13 }}>
+                {docenteSeleccionado.nombre} {docenteSeleccionado.apellido}
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--gris-medio)', marginTop: 2 }}>
+                Usuario: <strong>{docenteSeleccionado.email}</strong>
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label>Contraseña *</label>
+              <input type="password" value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres" />
+            </div>
+
+            <div className="alert alert-info" style={{ fontSize: 12 }}>
+              El docente usara su email como usuario y esta contraseña para iniciar sesión.
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalAcceso(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={guardarAcceso} disabled={guardando}>
+                {guardando ? 'Creando...' : 'Crear acceso'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL HABILIDADES ── */}
+      {modalHabilidades && docenteSeleccionado && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalHabilidades(false)}>
+          <div className="modal" style={{ maxWidth: 580 }}>
+            <div className="modal-header">
+              <h2>Habilidades — {docenteSeleccionado.nombre} {docenteSeleccionado.apellido}</h2>
+              <button className="modal-close" onClick={() => setModalHabilidades(false)}>×</button>
+            </div>
+            {error && <div className="alert alert-error">{error}</div>}
+
+            <p style={{ fontSize: 13, color: 'var(--gris-medio)', marginBottom: 16 }}>
+              Selecciona las asignaturas que este docente puede dictar.
+            </p>
+
+            {todasAsignaturas.length === 0 ? (
+              <div className="alert alert-warning">No hay asignaturas registradas en el sistema.</div>
+            ) : (
+              <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {todasAsignaturas
+                  .filter((a, idx, arr) => arr.findIndex(x => x.nombre === a.nombre && x.numero_modulo === a.numero_modulo) === idx)
+                  .map(a => (
+                  <div
+                    key={a.id}
+                    onClick={() => toggleAsignatura(a.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
+                      border: '1.5px solid',
+                      borderColor: seleccionadas.includes(a.id) ? 'var(--rojo-itq)' : 'var(--gris-borde)',
+                      background: seleccionadas.includes(a.id) ? 'var(--rojo-claro)' : 'var(--blanco)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                      border: '2px solid',
+                      borderColor: seleccionadas.includes(a.id) ? 'var(--rojo-itq)' : 'var(--gris-borde)',
+                      background: seleccionadas.includes(a.id) ? 'var(--rojo-itq)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {seleccionadas.includes(a.id) && (
+                        <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--negro)' }}>{a.nombre}</p>
+                      {a.codigo && (
+                        <span style={{ fontSize: 11, color: 'var(--gris-medio)' }}>{a.codigo}</span>
+                      )}
+                    </div>
+                    <span className="badge badge-gray" style={{ fontSize: 10 }}>
+                      Mod. {a.numero_modulo}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--gris-medio)' }}>
+              {seleccionadas.length} asignatura(s) seleccionada(s)
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalHabilidades(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={guardarHabilidades} disabled={guardando}>
+                {guardando ? 'Guardando...' : 'Guardar habilidades'}
               </button>
             </div>
           </div>

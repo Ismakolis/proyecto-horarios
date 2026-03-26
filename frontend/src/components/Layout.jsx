@@ -1,68 +1,69 @@
-/**
- * Layout.jsx
- * Estructura principal: sidebar estilo Kenjo + contenido.
- */
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../context/useAuth'
 
-const ICONS = {
-  dashboard:    '◻',
-  docentes:     '👤',
-  carreras:     '🎓',
-  asignaturas:  '📚',
-  periodos:     '📅',
-  horarios:     '🗓',
-  reportes:     '📊',
-  mishorarios:  '🗓',
-}
-
 const navCoordinador = [
-  { path: '/',            label: 'Dashboard',   icon: ICONS.dashboard },
-  { path: '/docentes',    label: 'Docentes',    icon: ICONS.docentes },
-  { path: '/carreras',    label: 'Carreras',    icon: ICONS.carreras },
-  { path: '/asignaturas', label: 'Asignaturas', icon: ICONS.asignaturas },
-  { path: '/periodos',    label: 'Periodos',    icon: ICONS.periodos },
-  { path: '/horarios',    label: 'Horarios',    icon: ICONS.horarios },
-  { path: '/reportes',    label: 'Reportes',    icon: ICONS.reportes },
+  { path: '/',            label: 'Dashboard',   icon: '◻' },
+  { path: '/docentes',    label: 'Docentes',    icon: '👤' },
+  { path: '/carreras',    label: 'Carreras',    icon: '🎓' },
+  { path: '/asignaturas', label: 'Asignaturas', icon: '📚' },
+  { path: '/periodos',    label: 'Períodos',    icon: '📅' },
+  { path: '/horarios',    label: 'Horarios',    icon: '🗓' },
+  { path: '/reportes',    label: 'Reportes',    icon: '📊' },
 ]
 const navDocente = [
-  { path: '/mis-horarios', label: 'Mis Horarios', icon: ICONS.mishorarios },
+  { path: '/mis-horarios', label: 'Mis Horarios', icon: '🗓' },
 ]
 const navAdministrativo = [
-  { path: '/',          label: 'Dashboard', icon: ICONS.dashboard },
-  { path: '/horarios',  label: 'Horarios',  icon: ICONS.horarios },
-  { path: '/reportes',  label: 'Reportes',  icon: ICONS.reportes },
+  { path: '/',         label: 'Dashboard', icon: '◻' },
+  { path: '/horarios', label: 'Horarios',  icon: '🗓' },
+  { path: '/reportes', label: 'Reportes',  icon: '📊' },
 ]
 
 export default function Layout() {
   const { usuario, cerrarSesion, esCoordinador, esDocente } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (esDocente && location.pathname === '/') navigate('/mis-horarios')
   }, [esDocente, location.pathname, navigate])
 
-  const handleLogout = () => { cerrarSesion(); navigate('/login') }
+  // Cierra sidebar al cambiar de página
+  useEffect(() => { setSidebarOpen(false) }, [location.pathname])
 
-  const navItems = esCoordinador ? navCoordinador : esDocente ? navDocente : navAdministrativo
-  const rolLabel = usuario?.rol || ''
-  const initiales = `${usuario?.nombre?.[0] || ''}${usuario?.apellido?.[0] || ''}`.toUpperCase()
+  const handleLogout = () => { cerrarSesion(); navigate('/login') }
+  const navItems  = esCoordinador ? navCoordinador : esDocente ? navDocente : navAdministrativo
+  const rolLabel  = usuario?.rol || ''
+  const initials  = `${usuario?.nombre?.[0] || ''}${usuario?.apellido?.[0] || ''}`.toUpperCase()
 
   return (
     <div className="layout">
-      <aside className="sidebar">
-        {/* Logo */}
+      {/* Botón hamburger — solo mobile */}
+      <button
+        className="sidebar-toggle"
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label="Abrir menú"
+      >
+        <span /><span /><span />
+      </button>
+
+      {/* Overlay */}
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">ITQ</div>
           <div className="sidebar-logo-text">
             <h2>Horarios ITQ</h2>
-            <p>Sistema Academico</p>
+            <p>Sistema Académico</p>
           </div>
         </div>
-
-        {/* Nav */}
         <nav className="sidebar-nav">
           {navItems.map(item => (
             <button
@@ -75,19 +76,15 @@ export default function Layout() {
             </button>
           ))}
         </nav>
-
-        {/* Footer */}
         <div className="sidebar-footer">
           <div className="user-card">
-            <div className="user-avatar">{initiales}</div>
+            <div className="user-avatar">{initials}</div>
             <div className="user-card-info">
               <strong>{usuario?.nombre} {usuario?.apellido}</strong>
               <span className={`user-role-badge ${rolLabel}`}>{rolLabel}</span>
             </div>
           </div>
-          <button className="btn-logout" onClick={handleLogout}>
-            Cerrar sesion
-          </button>
+          <button className="btn-logout" onClick={handleLogout}>Cerrar sesión</button>
         </div>
       </aside>
 

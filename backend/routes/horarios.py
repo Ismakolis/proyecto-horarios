@@ -5,7 +5,8 @@ from database import get_db
 from schemas.horarios import HorarioCreate, HorarioUpdate, HorarioResponse, GenerarHorarioRequest
 from services.horarios_service import (
     crear_horario, listar_horarios, actualizar_horario,
-    eliminar_horario, generar_horarios_automatico, generar_horarios_con_ia
+    eliminar_horario, generar_horarios_automatico, generar_horarios_con_ia,
+    generar_horarios_todas_sedes
 )
 from utils.jwt import solo_coordinador, coordinador_o_admin, cualquier_rol
 from models.models import Usuario
@@ -69,6 +70,9 @@ async def generar(
     Si usar_ia=false, usa el algoritmo automatico del sistema.
     Respeta todas las reglas: max 3 asignaturas por docente, sin choques, carga horaria TC.
     """
+    # Si viene carrera_nombre, generar para todas las sedes
+    if data.carrera_nombre:
+        return await generar_horarios_todas_sedes(data, db)
     if data.usar_ia:
         return await generar_horarios_con_ia(data, db)
     return await generar_horarios_automatico(data, db)

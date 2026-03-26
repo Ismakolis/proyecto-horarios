@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from models.models import Carrera, Nivel, Asignatura
@@ -20,6 +20,7 @@ async def crear_carrera(data: CarreraCreate, db: AsyncSession) -> Carrera:
         id=carrera_id,
         nombre=data.nombre,
         codigo=data.codigo,
+        sede=data.sede,
         descripcion=data.descripcion,
     )
     db.add(carrera)
@@ -34,6 +35,7 @@ async def crear_carrera(data: CarreraCreate, db: AsyncSession) -> Carrera:
             nombre=niv.nombre or f"Nivel {niv.numero}",
             paralelos_matutina=niv.paralelos_matutina,
             paralelos_nocturna=niv.paralelos_nocturna,
+            jornada_habilitada=niv.jornada_habilitada,
         )
         db.add(nivel)
     await db.flush()
@@ -73,6 +75,8 @@ async def actualizar_carrera(carrera_id: str, data: CarreraUpdate, db: AsyncSess
         carrera.nombre = data.nombre
     if data.descripcion is not None:
         carrera.descripcion = data.descripcion
+    if data.sede is not None:
+        carrera.sede = data.sede
     if data.activo is not None:
         carrera.activo = data.activo
     await db.flush()
@@ -105,6 +109,7 @@ async def agregar_nivel(carrera_id: str, data: NivelCreate, db: AsyncSession) ->
         nombre=data.nombre or f"Nivel {data.numero}",
         paralelos_matutina=data.paralelos_matutina,
         paralelos_nocturna=data.paralelos_nocturna,
+        jornada_habilitada=getattr(data, 'jornada_habilitada', 'ambas'),
     )
     db.add(nivel)
     await db.flush()
@@ -123,6 +128,8 @@ async def actualizar_nivel(carrera_id: str, nivel_id: str, data, db: AsyncSessio
         nivel.paralelos_matutina = data.paralelos_matutina
     if data.paralelos_nocturna is not None:
         nivel.paralelos_nocturna = data.paralelos_nocturna
+    if data.jornada_habilitada is not None:
+        nivel.jornada_habilitada = data.jornada_habilitada
     await db.flush()
     await db.refresh(nivel)
     return nivel
@@ -187,3 +194,92 @@ async def actualizar_asignatura(asignatura_id: str, data: AsignaturaUpdate, db: 
     await db.flush()
     await db.refresh(asignatura)
     return asignatura
+
+async def copiar_malla(carrera_origen_id: str, carrera_destino_id: str, db: AsyncSession) -> dict:
+    """
+    Copia todas las asignaturas de una carrera a otra.
+    Util para replicar la malla entre sedes.
+    """
+    from sqlalchemy import select, and_
+    from models.models import Nivel
+
+    # Verificar que ambas carreras existen
+    r = await db.execute(select(Carrera).where(Carrera.id == carrera_origen_id))
+    origen = r.scalar_one_or_none()
+    if not origen:
+        raise HTTPException(status_code=404, detail="Carrera origen no encontrada")
+
+    r = await db.execute(select(Carrera).where(Carrera.id == carrera_destino_id))
+    destino = r.scalar_one_or_none()
+    if not destino:
+        raise HTTPException(status_code=404, detail="Carrera destino no encontrada")
+
+    # Obtener niveles de la carrera destino ordenados
+    r = await db.execute(
+        select(Nivel).where(Nivel.carrera_id == carrera_destino_id).order_by(Nivel.numero)
+    )
+    niveles_destino = r.scalars().all()
+    mapa_niveles = {n.numero: n for n in niveles_destino}
+
+    # Obtener niveles de la carrera origen
+    r = await db.execute(
+        select(Nivel).where(Nivel.carrera_id == carrera_origen_id).order_by(Nivel.numero)
+    )
+    niveles_origen = r.scalars().all()
+
+    copiadas = 0
+    omitidas = 0
+
+    for nivel_origen in niveles_origen:
+        nivel_destino = mapa_niveles.get(nivel_origen.numero)
+        if not nivel_destino:
+            omitidas += 1
+            continue
+
+        # Obtener asignaturas de este nivel en la carrera origen
+        r = await db.execute(
+            select(Asignatura).where(
+                and_(
+                    Asignatura.carrera_id == carrera_origen_id,
+                    Asignatura.nivel_id == nivel_origen.id,
+                    Asignatura.activo == True,
+                )
+            )
+        )
+        asigs = r.scalars().all()
+
+        for asig in asigs:
+            # Verificar que no exista ya en la carrera destino
+            r = await db.execute(
+                select(Asignatura).where(
+                    and_(
+                        Asignatura.carrera_id == carrera_destino_id,
+                        Asignatura.nivel_id == nivel_destino.id,
+                        Asignatura.nombre == asig.nombre,
+                        Asignatura.numero_modulo == asig.numero_modulo,
+                    )
+                )
+            )
+            if r.scalar_one_or_none():
+                omitidas += 1
+                continue
+
+            nueva = Asignatura(
+                id=str(uuid.uuid4()),
+                carrera_id=carrera_destino_id,
+                nivel_id=nivel_destino.id,
+                nombre=asig.nombre,
+                codigo=asig.codigo,
+                numero_modulo=asig.numero_modulo,
+                horas_semanales=asig.horas_semanales,
+                horas_modulo=asig.horas_modulo,
+            )
+            db.add(nueva)
+            copiadas += 1
+
+    await db.flush()
+    return {
+        "mensaje": f"Malla copiada: {copiadas} asignaturas copiadas, {omitidas} omitidas (ya existian o nivel no encontrado)",
+        "copiadas": copiadas,
+        "omitidas": omitidas,
+    }

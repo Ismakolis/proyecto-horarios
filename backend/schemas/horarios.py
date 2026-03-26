@@ -65,5 +65,6 @@ class HorarioResponse(BaseModel):
 class GenerarHorarioRequest(BaseModel):
     periodo_id: str
     modulo_id: str
-    carrera_id: str
+    carrera_id: str        # puede ser ID o nombre de carrera
+    carrera_nombre: Optional[str] = None  # si se envia, busca todas las sedes
     usar_ia: bool = False

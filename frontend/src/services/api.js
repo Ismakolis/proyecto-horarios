@@ -8,7 +8,7 @@ import axios from 'axios'
 
 // Instancia base de Axios apuntando al backend
 const API = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
 })
 
 // Interceptor de peticion: agrega el token JWT si existe
@@ -37,12 +37,13 @@ export const getMe             = ()     => API.get('/auth/me')
 export const registrarUsuario  = (data) => API.post('/auth/registro', data)
 
 // Docentes
-export const getDocentes          = (activo) => API.get('/docentes/', { params: { activo } })
-export const getDocente           = (id)     => API.get(`/docentes/${id}`)
-export const createDocente        = (data)   => API.post('/docentes/', data)
-export const updateDocente        = (id, data) => API.put(`/docentes/${id}`, data)
-export const deleteDocente        = (id)     => API.delete(`/docentes/${id}`)
-export const updateDisponibilidad = (id, data) => API.put(`/docentes/${id}/disponibilidad`, data)
+export const getDocentes        = (activo) => API.get('/docentes/', { params: { activo } })
+export const getDocente         = (id)     => API.get(`/docentes/${id}`)
+export const createDocente      = (data)   => API.post('/docentes/', data)
+export const updateDocente      = (id, data) => API.put(`/docentes/${id}`, data)
+export const crearAccesoDocente = (data)   => API.post('/docentes/crear-acceso', data)
+export const getHabilidades     = (id)     => API.get(`/docentes/${id}/habilidades`)
+export const updateHabilidades  = (id, data) => API.put(`/docentes/${id}/habilidades`, data)
 
 // Carreras y asignaturas
 export const getCarreras      = ()           => API.get('/carreras/')
@@ -53,6 +54,7 @@ export const getAsignaturas   = (carreraId, nivelId) =>
   API.get('/carreras/asignaturas/lista', { params: { carrera_id: carreraId, nivel_id: nivelId } })
 export const createAsignatura = (data)       => API.post('/carreras/asignaturas', data)
 export const updateAsignatura = (id, data)   => API.put(`/carreras/asignaturas/${id}`, data)
+export const copiarMalla      = (carreraId, origenId) => API.post(`/carreras/${carreraId}/copiar-malla/${origenId}`)
 export const updateNivel      = (carreraId, nivelId, data) =>
   API.put(`/carreras/${carreraId}/niveles/${nivelId}`, data)
 

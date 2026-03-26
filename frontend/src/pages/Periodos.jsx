@@ -75,7 +75,7 @@ export default function Periodos() {
 
     if (!editando) {
       const anio = parseInt(form.anio)
-      if (isNaN(anio) || anio < 2000 || anio > 2100) return 'El ano debe estar entre 2000 y 2100'
+      if (isNaN(anio) || anio < 2000 || anio > 2100) return 'El año debe estar entre 2000 y 2100'
       if (!form.fecha_inicio) return 'La fecha de inicio del periodo es obligatoria'
       if (!form.fecha_fin) return 'La fecha de fin del periodo es obligatoria'
       if (new Date(form.fecha_fin) <= new Date(form.fecha_inicio)) {
@@ -152,7 +152,7 @@ export default function Periodos() {
               <thead>
                 <tr>
                   <th>Nombre</th>
-                  <th>Ano</th>
+                  <th>Año</th>
                   <th>Numero</th>
                   <th>Paralelos</th>
                   <th>Modulos</th>
@@ -215,7 +215,7 @@ export default function Periodos() {
               <>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Ano *</label>
+                    <label>Año *</label>
                     <input
                       type="number"
                       value={form.anio}
