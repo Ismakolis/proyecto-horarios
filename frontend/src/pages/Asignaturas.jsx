@@ -124,7 +124,7 @@ export default function Asignaturas() {
                     <p>Malla curricular por carrera, nivel y modulo</p>
                 </div>
                 {carreraSeleccionada && (
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="page-actions">
                         <button className="btn btn-secondary" onClick={() => { setCarreraOrigenId(''); setModalCopiar(true) }}>
                             Copiar malla
                         </button>
@@ -207,19 +207,19 @@ export default function Asignaturas() {
                         return (
                             <div key={nivel.id} className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
                                 {/* Header nivel */}
-                                <div style={{ background: 'var(--negro)', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '10px 10px 0 0' }}>
+                                <div style={{ background: 'var(--text-primary)', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderRadius: '10px 10px 0 0' }}>
                                     <span style={{ fontWeight: 700, fontSize: 14 }}>
                                         {nivel.nombre || `Nivel ${nivel.numero}`}
                                     </span>
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                                         <span style={{ fontSize: 11, background: 'rgba(59,130,246,0.25)', color: '#93c5fd', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
-                                            Manana: {nivel.paralelos_matutina || 0} paralelo(s)
+                                            Mañana: {nivel.paralelos_matutina || 0}
                                         </span>
                                         <span style={{ fontSize: 11, background: 'rgba(124,58,237,0.25)', color: '#c4b5fd', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
-                                            Noche: {nivel.paralelos_nocturna || 0} paralelo(s)
+                                            Noche: {nivel.paralelos_nocturna || 0}
                                         </span>
                                         <span style={{ fontSize: 11, color: '#9ca3af' }}>
-                                            {asigNivel.length} / 6 asignaturas
+                                            {asigNivel.length}/6 asig.
                                         </span>
                                     </div>
                                 </div>
@@ -229,7 +229,7 @@ export default function Asignaturas() {
                                     const asigsMod = asigNivel.filter(a => parseInt(a.numero_modulo) === numMod)
                                     const espaciosLibres = 2 - asigsMod.length
                                     return (
-                                        <div key={numMod} style={{ borderBottom: '1px solid #f0f0f0', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                                        <div key={numMod} style={{ borderBottom: '1px solid var(--border)', padding: '14px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
                                             <div style={{ minWidth: 90 }}>
                                                 <span style={{
                                                     background: numMod === 1 ? '#dbeafe' : numMod === 2 ? '#fef3c7' : '#d1fae5',
@@ -258,9 +258,9 @@ export default function Asignaturas() {
                                                     <div
                                                         key={i}
                                                         onClick={() => abrirModal(nivel.id, numMod)}
-                                                        style={{ border: '2px dashed #e5e7eb', borderRadius: 8, padding: '8px 14px', minWidth: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9ca3af', fontSize: 12 }}
-                                                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--rojo-itq)'; e.currentTarget.style.color = 'var(--rojo-itq)' }}
-                                                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#9ca3af' }}
+                                                        style={{ border: '2px dashed var(--border)', borderRadius: 8, padding: '8px 14px', flex: '1 1 140px', minWidth: 140, maxWidth: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, transition: 'all 0.2s' }}
+                                                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.color = 'var(--brand)' }}
+                                                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
                                                     >
                                                         + Agregar
                                                     </div>
@@ -278,7 +278,7 @@ export default function Asignaturas() {
             {/* Modal nueva asignatura */}
             {modal && (
                 <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
-                    <div className="modal">
+                    <div className="modal" style={{ maxWidth: '500px', width: '90%' }}>
                         <div className="modal-header">
                             <h2>Nueva asignatura</h2>
                             <button className="modal-close" onClick={() => setModal(false)}>×</button>
@@ -346,7 +346,7 @@ export default function Asignaturas() {
             {/* Modal copiar malla */}
             {modalCopiar && carreraSeleccionada && (
                 <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalCopiar(false)}>
-                    <div className="modal" style={{ maxWidth: 440 }}>
+                    <div className="modal" style={{ maxWidth: 440, width: '90%' }}>
                         <div className="modal-header">
                             <h2>Copiar malla curricular</h2>
                             <button className="modal-close" onClick={() => setModalCopiar(false)}>×</button>

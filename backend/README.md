@@ -1,115 +1,135 @@
-# Sistema de Horarios ITQ
-**Instituto Superior Tecnológico Quito — Carrera de Desarrollo de Software**
+# Sistema de Horarios ITQ — Backend
 
-## Stack Tecnológico
-- **Backend:** FastAPI + SQLAlchemy + PostgreSQL
-- **Frontend:** React + Material UI
-- **IA:** Anthropic Claude API
-- **Exportación:** openpyxl (Excel)
+**Instituto Superior Tecnológico Quito**  
+API REST para generación automática de horarios académicos.
 
 ---
 
-## Instalación y Configuración
+## Stack
 
-### 1. Clonar y preparar backend
+- **Framework:** FastAPI + Uvicorn
+- **Base de datos:** PostgreSQL (asyncpg + SQLAlchemy async)
+- **Autenticación:** JWT (Bearer Token)
+- **IA:** Groq API — LLaMA 3.3-70b (gratis en console.groq.com)
+- **Reportes:** openpyxl (Excel)
+
+---
+
+## Instalación local
+
+### 1. Crear entorno virtual
 
 ```bash
 cd backend
 python -m venv venv
 
-# Windows:
+# Windows
 venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
 
+# Mac/Linux
+source venv/bin/activate
+```
+
+### 2. Instalar dependencias
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configurar variables de entorno
+### 3. Configurar variables de entorno
 
-```bash
-cp .env.example .env
-# Editar .env con tus credenciales de PostgreSQL y API Key
+Crear archivo `backend/.env`:
+
+```env
+DATABASE_URL=postgresql+asyncpg://usuario:contraseña@localhost:5432/horarios_itq
+SECRET_KEY=clave_secreta_larga_y_aleatoria
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxx
+FRONTEND_URL=http://localhost:5173
 ```
 
-### 3. Crear base de datos en PostgreSQL
+> Obtén tu GROQ_API_KEY gratis en: https://console.groq.com
+
+### 4. Crear la base de datos en PostgreSQL
 
 ```sql
 CREATE DATABASE horarios_itq;
 ```
 
-O usando Supabase: crear proyecto y copiar la connection string.
-
-### 4. Inicializar migraciones con Alembic
-
-```bash
-alembic init alembic
-alembic revision --autogenerate -m "inicial"
-alembic upgrade head
-```
-
-### 5. Ejecutar backend
+### 5. Iniciar el servidor
 
 ```bash
 uvicorn main:app --reload --port 8000
 ```
-API disponible en: http://localhost:8000
-Docs automáticas en: http://localhost:8000/docs
 
----
+- API: http://localhost:8000
+- Documentación: http://localhost:8000/docs
 
-### 6. Instalar y ejecutar frontend
+### 6. Crear usuario administrador
 
 ```bash
-cd frontend
-npm install
-npm start
+curl -X POST http://localhost:8000/api/auth/seed-admin
 ```
-App disponible en: http://localhost:3000
+
+Credenciales iniciales:
+- **Email:** admin@itq.edu.ec
+- **Contraseña:** Admin123
+
+> ⚠️ Cambiar la contraseña inmediatamente en producción.
 
 ---
 
-## Estructura del Proyecto
+## Deploy en Render
+
+1. Conectar repositorio en render.com → New Web Service
+2. **Root Directory:** `proyecto-horarios/backend`
+3. **Build Command:** `pip install -r requirements.txt`
+4. **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. Agregar variables de entorno en Render:
+   - `DATABASE_URL` — URL interna de PostgreSQL en Render
+   - `SECRET_KEY` — clave secreta aleatoria
+   - `GROQ_API_KEY` — clave de Groq
+   - `FRONTEND_URL` — URL de Vercel (ej: https://tu-app.vercel.app)
+
+> La URL de PostgreSQL en Render empieza con `postgres://` — el sistema la convierte automáticamente al formato correcto.
+
+---
+
+## Estructura
 
 ```
-proyecto-horarios/
-├── backend/
-│   ├── main.py              # Entrada principal FastAPI
-│   ├── database.py          # Conexión PostgreSQL
-│   ├── models/
-│   │   └── models.py        # Tablas SQLAlchemy
-│   ├── schemas/             # Pydantic (validación de datos)
-│   ├── routes/              # Endpoints de la API
-│   ├── services/            # Lógica de negocio
-│   └── utils/               # Helpers (JWT, Excel, IA)
-└── frontend/
-    └── src/
-        ├── pages/           # Páginas por rol
-        ├── components/      # Componentes reutilizables
-        ├── services/        # Llamadas a la API
-        └── context/         # Estado global (auth)
+backend/
+├── main.py              # Entrada FastAPI, CORS, rutas
+├── database.py          # Conexión PostgreSQL async
+├── models/
+│   └── models.py        # Modelos SQLAlchemy (tablas)
+├── schemas/             # Validación con Pydantic
+├── routes/              # Endpoints HTTP por módulo
+├── services/            # Lógica de negocio
+└── utils/
+    ├── jwt.py           # Autenticación y roles
+    └── excel.py         # Generación de reportes Excel
 ```
 
 ---
 
-## Reglas de Negocio Implementadas
+## Reglas de negocio
 
 | Regla | Descripción |
 |-------|-------------|
-| Máx. asignaturas | Cada docente máximo 3 asignaturas por módulo |
-| Jornada matutina | 08:00 - 12:00, asignaturas de 2 horas |
-| Jornada nocturna | 18:30 - 21:30, asignaturas de 1.5 horas |
-| Carga TC mínima | 272 horas por período (tiempo completo) |
-| Carga TC máxima | 380 horas por período (tiempo completo) |
-| Sin choques | Un docente no puede tener 2 clases al mismo tiempo |
-| Paralelos | Configurable por período académico |
+| Máx. asignaturas | 3 por docente por módulo (global entre sedes) |
+| Habilidades | Docentes solo dictan materias asignadas |
+| Sin choques | Un docente no puede estar en 2 lugares a la misma hora |
+| Jornada matutina | Bloques 08:00-10:00 y 10:00-12:00 |
+| Jornada nocturna | Bloques 18:30-20:00 y 20:00-21:30 |
+| Carga TC mínima | 272h por período académico |
+| Carga TC máxima | 380h por período académico |
+| Multisede | Quito y Conocoto — docentes compartidos con límite global |
 
 ---
 
-## Roles del Sistema
+## Roles
 
-| Rol | Permisos |
-|-----|----------|
-| Coordinador | CRUD completo, generar horarios, exportar Excel |
-| Docente | Ver sus propios horarios |
-| Administrativo | Ver reportes y horarios (solo lectura) |
+| Rol | Acceso |
+|-----|--------|
+| coordinador | CRUD completo, generar horarios, exportar Excel |
+| docente | Solo sus propios horarios |

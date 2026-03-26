@@ -27,77 +27,56 @@ def _get_api_key() -> str:
 
 def _construir_prompt(contexto: dict) -> str:
     """
-    Construye el prompt con todo el contexto del instituto para enviarlo a Groq.
+    Prompt simplificado: la IA solo decide qué docente va con qué asignatura.
+    El sistema se encarga de asignar días y horas sin choques.
     """
-    carrera    = contexto["carrera"]
-    modulo_num = contexto["modulo_numero"]
+    carrera     = contexto["carrera"]
+    modulo_num  = contexto["modulo_numero"]
     asignaturas = contexto["asignaturas"]
     docentes    = contexto["docentes"]
-    dias        = ["lunes", "martes", "miercoles", "jueves", "viernes"]
 
     asig_txt = "\n".join([
-        f"  - ID: {a['id']} | Nombre: {a['nombre']} | Nivel: {a['nivel_numero']} | "
-        f"Paralelo: {a['paralelo']} | Horas modulo: {a['horas_modulo']}h"
+        f"  - ID: {a['id']} | {a['nombre']} | Nivel {a['nivel_numero']} | Paralelo {a['paralelo']} | Jornada: {a['jornada']}"
         for a in asignaturas
     ])
 
-    doc_txt = "\n".join([
-        f"  - ID: {d['id']} | Nombre: {d['nombre']} | Tipo: {d['tipo']} | "
-        f"Asignaturas ya asignadas este modulo: {d['asignaturas_actuales']}/3 | "
-        f"Disponibilidad: {', '.join(d['disponibilidad']) if d['disponibilidad'] else 'todos los dias'}"
-        for d in docentes
-    ])
+    def fmt_doc(d):
+        ocupados = d.get("horarios_ya_asignados", [])
+        cupo = 3 - d["asignaturas_actuales"]
+        return (
+            f"  - ID: {d['id']} | {d['nombre']} | {d['tipo']} | "
+            f"Cupo disponible: {cupo}/3"
+        )
+    doc_txt = "\n".join([fmt_doc(d) for d in docentes if d["asignaturas_actuales"] < 3])
 
-    return f"""Eres un asistente especializado en planificacion academica para institutos tecnologicos.
+    return f"""Eres un coordinador academico. Tu unica tarea es asignar un docente a cada asignatura.
 
-Debes generar una distribucion optima de horarios para el siguiente contexto:
+CARRERA: {carrera} | MODULO: {modulo_num}
 
-CARRERA: {carrera}
-MODULO: {modulo_num}
-DIAS DISPONIBLES: {', '.join(dias)}
-
-ASIGNATURAS A DISTRIBUIR (cada una necesita un docente, dia y hora):
+ASIGNATURAS (necesitan un docente):
 {asig_txt}
 
-DOCENTES DISPONIBLES:
+DOCENTES DISPONIBLES (con cupo):
 {doc_txt}
 
-REGLAS OBLIGATORIAS — DEBES CUMPLIRLAS TODAS SIN EXCEPCION:
-1. Cada docente puede tener MAXIMO 3 asignaturas en este modulo en total.
-2. CHOQUE DE DOCENTE: Un mismo docente NO puede tener DOS asignaturas con el mismo dia Y la misma hora_inicio. Si el docente ya tiene una asignacion en "lunes 08:00", la siguiente debe ir en otro dia O en otra hora.
-3. CHOQUE DE PARALELO: Un mismo paralelo de un nivel NO puede tener DOS asignaturas con el mismo dia Y la misma hora_inicio. Cada paralelo debe tener sus clases en dias u horas distintas.
-4. Jornada MATUTINA — combinaciones validas unicamente:
-   - hora_inicio "08:00" con hora_fin "10:00"
-   - hora_inicio "10:00" con hora_fin "12:00"
-5. Jornada NOCTURNA — combinaciones validas unicamente:
-   - hora_inicio "18:30" con hora_fin "20:00"
-   - hora_inicio "20:00" con hora_fin "21:30"
-6. Distribuye dias de forma variada — usa lunes, martes, miercoles, jueves y viernes, no pongas todo el mismo dia.
-7. Distribuye docentes de forma equitativa — no asignes todas las materias al mismo docente.
-8. Alterna las horas — no pongas todas las asignaturas a las 08:00, usa tambien 10:00, 18:30 y 20:00.
+REGLAS:
+1. Cada docente puede recibir MAXIMO {3} asignaturas en total.
+2. Distribuye equitativamente — no asignes todo al mismo docente.
+3. Usa solo IDs exactos de las listas anteriores.
 
-PROCESO QUE DEBES SEGUIR:
-- Para cada asignatura, antes de asignarla verifica que el docente elegido NO tenga ya una asignacion en ese mismo dia y hora.
-- Para cada asignatura, verifica que el paralelo NO tenga ya una asignacion en ese mismo dia y hora.
-- Si hay choque, cambia el dia o la hora hasta encontrar un slot libre.
-
-Devuelve UNICAMENTE un JSON valido con esta estructura exacta, sin texto adicional, sin markdown, sin explicaciones:
+Devuelve SOLO este JSON, sin texto adicional:
 
 {{
   "asignaciones": [
     {{
-      "asignatura_id": "uuid-de-la-asignatura",
-      "docente_id": "uuid-del-docente",
-      "dia": "lunes",
-      "jornada": "matutina",
-      "hora_inicio": "08:00",
-      "hora_fin": "10:00"
+      "asignatura_id": "id-exacto-de-la-lista",
+      "docente_id": "id-exacto-del-docente"
     }}
   ],
-  "resumen": "Breve descripcion de la estrategia de distribucion usada"
+  "resumen": "breve descripcion de la distribucion"
 }}
 
-Genera una asignacion para CADA asignatura listada. Solo JSON, nada mas."""
+Una entrada por cada asignatura. Total esperado: {len(asignaturas)} asignaciones."""
 
 
 async def solicitar_sugerencia_ia(contexto: dict) -> dict:

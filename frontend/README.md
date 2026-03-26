@@ -1,16 +1,104 @@
-# React + Vite
+# Sistema de Horarios ITQ — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Instituto Superior Tecnológico Quito**  
+Interfaz web para la gestión de horarios académicos.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- **Framework:** React 18 + Vite
+- **Routing:** React Router v6
+- **HTTP:** Axios
+- **Diseño:** CSS Variables — UI estilo Kenjo, responsivo
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Instalación local
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 1. Instalar dependencias
+
+```bash
+cd frontend
+npm install
+```
+
+### 2. Configurar URL del backend
+
+Crear archivo `frontend/.env`:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+### 3. Iniciar servidor de desarrollo
+
+```bash
+npm run dev
+```
+
+App disponible en: http://localhost:5173
+
+### 4. Build para producción
+
+```bash
+npm run build
+```
+
+El build queda en `frontend/dist/`.
+
+---
+
+## Deploy en Vercel
+
+1. Conectar repositorio en vercel.com → New Project
+2. **Root Directory:** `proyecto-horarios/frontend`
+3. **Framework Preset:** Vite
+4. Agregar variable de entorno:
+   - `VITE_API_URL` → `https://tu-backend.onrender.com/api`
+5. Deploy
+
+> El archivo `vercel.json` ya está configurado para manejar el routing de la SPA correctamente.
+
+---
+
+## Estructura
+
+```
+frontend/
+├── src/
+│   ├── pages/
+│   │   ├── Login.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── Docentes.jsx
+│   │   ├── Carreras.jsx
+│   │   ├── Asignaturas.jsx
+│   │   ├── Periodos.jsx
+│   │   ├── Horarios.jsx
+│   │   ├── Reportes.jsx
+│   │   └── MisHorarios.jsx
+│   ├── components/
+│   │   └── Layout.jsx       # Sidebar responsivo con hamburger
+│   ├── context/
+│   │   └── AuthContext.jsx  # Sesión JWT global
+│   ├── services/
+│   │   └── api.js           # Cliente Axios centralizado
+│   └── index.css            # Sistema de diseño completo
+├── vercel.json              # Configuración SPA routing
+└── .env.production          # URL backend producción
+```
+
+---
+
+## Módulos del sistema
+
+| Página | Descripción |
+|--------|-------------|
+| Dashboard | Resumen estadístico del sistema |
+| Docentes | CRUD, acceso al sistema, habilidades |
+| Carreras | Gestión por sede (Quito / Conocoto) |
+| Asignaturas | Malla curricular por nivel y módulo |
+| Períodos | Períodos académicos y módulos |
+| Horarios | Generación con IA, visualización y edición |
+| Reportes | Exportación Excel por carrera, nivel o docente |
+| Mis Horarios | Vista del docente autenticado |
