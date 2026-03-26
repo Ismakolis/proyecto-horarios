@@ -129,7 +129,7 @@ export default function Carreras() {
       ) : carreras.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <div className="empty-state-icon">🎓</div>
+            <div className="empty-state-icon"></div>
             <p>No hay carreras registradas</p>
             <small>Crea la primera carrera para empezar</small>
           </div>
@@ -141,16 +141,16 @@ export default function Carreras() {
 
               {/* Header carrera */}
               <div
-                style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: carreraExpandida === carrera.id ? '1px solid var(--gris-borde)' : 'none', cursor: 'pointer' }}
+                style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: carreraExpandida === carrera.id ? '1px solid var(--border)' : 'none', cursor: 'pointer', flexWrap: 'wrap', gap: 10 }}
                 onClick={() => setCarreraExpandida(carreraExpandida === carrera.id ? null : carrera.id)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 10, background: 'var(--rojo-claro)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: 'var(--rojo-itq)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 10, background: 'var(--brand-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: 'var(--brand)', flexShrink: 0 }}>
                     {carrera.codigo}
                   </div>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--negro)' }}>{carrera.nombre}</p>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{carrera.nombre}</p>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span className="badge badge-gray" style={{ fontSize: 10 }}>{carrera.sede || 'Quito'}</span>
                       <span className="badge badge-gray" style={{ fontSize: 10 }}>{carrera.niveles?.length || 0} niveles</span>
                       <span className={`badge ${carrera.activo ? 'badge-green' : 'badge-red'}`} style={{ fontSize: 10 }}>
@@ -159,14 +159,15 @@ export default function Carreras() {
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                   <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); navigate('/asignaturas', { state: { carreraId: carrera.id } }) }}>
-                    Malla curricular
+                    <span className="hide-mobile">Malla curricular</span>
+                    <span className="hide-tablet" style={{ display: 'none' }}></span>
                   </button>
                   <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); abrirEditar(carrera) }}>
                     Editar
                   </button>
-                  <span style={{ color: 'var(--gris-medio)', fontSize: 16 }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 16 }}>
                     {carreraExpandida === carrera.id ? '▲' : '▼'}
                   </span>
                 </div>
@@ -175,16 +176,16 @@ export default function Carreras() {
               {/* Niveles expandidos */}
               {carreraExpandida === carrera.id && (
                 <div style={{ padding: '16px 20px' }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--gris-medio)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Configuracion por nivel
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 10 }}>
                     {carrera.niveles?.slice().sort((a, b) => a.numero - b.numero).map(nivel => {
                       const js = jornadaStyle(nivel.jornada_habilitada)
                       return (
-                        <div key={nivel.id} style={{ border: '1px solid var(--gris-borde)', borderRadius: 10, padding: '12px 14px', background: 'var(--gris-claro)' }}>
+                        <div key={nivel.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', background: 'var(--surface-2)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--negro)' }}>
+                            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>
                               {nivel.nombre || `Nivel ${nivel.numero}`}
                             </span>
                             <button className="btn btn-ghost btn-sm" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => abrirEditarNivel(carrera, nivel)}>
@@ -192,13 +193,13 @@ export default function Carreras() {
                             </button>
                           </div>
                           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                            <div style={{ flex: 1, textAlign: 'center', padding: '6px 4px', background: 'var(--azul-claro)', borderRadius: 8, border: '1px solid var(--azul-borde)' }}>
-                              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--azul)' }}>{nivel.paralelos_matutina}</div>
-                              <div style={{ fontSize: 9, color: 'var(--azul)', fontWeight: 600 }}>MANANA</div>
+                            <div style={{ flex: 1, textAlign: 'center', padding: '6px 4px', background: 'var(--blue-soft)', borderRadius: 8, border: '1px solid var(--blue-border)' }}>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--blue)' }}>{nivel.paralelos_matutina}</div>
+                              <div style={{ fontSize: 9, color: 'var(--blue)', fontWeight: 600 }}>MAÑANA</div>
                             </div>
-                            <div style={{ flex: 1, textAlign: 'center', padding: '6px 4px', background: 'var(--violeta-claro)', borderRadius: 8, border: '1px solid #ddd6fe' }}>
-                              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--violeta)' }}>{nivel.paralelos_nocturna}</div>
-                              <div style={{ fontSize: 9, color: 'var(--violeta)', fontWeight: 600 }}>NOCHE</div>
+                            <div style={{ flex: 1, textAlign: 'center', padding: '6px 4px', background: 'var(--violet-soft)', borderRadius: 8, border: '1px solid #ddd6fe' }}>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--violet)' }}>{nivel.paralelos_nocturna}</div>
+                              <div style={{ fontSize: 9, color: 'var(--violet)', fontWeight: 600 }}>NOCHE</div>
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
@@ -217,7 +218,7 @@ export default function Carreras() {
         </div>
       )}
 
-      {/* ── MODAL CREAR/EDITAR CARRERA ── */}
+      {/*  MODAL CREAR/EDITAR CARRERA  */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div className="modal" style={{ maxWidth: 620 }}>
@@ -297,7 +298,7 @@ export default function Carreras() {
         </div>
       )}
 
-      {/* ── MODAL EDITAR NIVEL ── */}
+      {/*  MODAL EDITAR NIVEL  */}
       {modalNivel && nivelEditando && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNivel(false)}>
           <div className="modal" style={{ maxWidth: 400 }}>

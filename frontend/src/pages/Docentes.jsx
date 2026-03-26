@@ -177,7 +177,7 @@ export default function Docentes() {
           <div className="loading">Cargando docentes...</div>
         ) : docentes.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">👤</div>
+            <div className="empty-state-icon"></div>
             <p>No hay docentes registrados</p>
           </div>
         ) : (
@@ -186,9 +186,9 @@ export default function Docentes() {
               <thead>
                 <tr>
                   <th>Docente</th>
-                  <th>Cédula</th>
+                  <th className="hide-mobile">Cédula</th>
                   <th>Tipo</th>
-                  <th>Acceso</th>
+                  <th className="hide-mobile">Acceso</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -200,27 +200,27 @@ export default function Docentes() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
                           width: 34, height: 34, borderRadius: '50%',
-                          background: 'var(--rojo-claro)', color: 'var(--rojo-itq)',
+                          background: 'var(--brand-soft)', color: 'var(--brand)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontWeight: 700, fontSize: 12, flexShrink: 0,
                         }}>
                           {doc.nombre[0]}{doc.apellido[0]}
                         </div>
                         <div>
-                          <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--negro)' }}>
+                          <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
                             {doc.nombre} {doc.apellido}
                           </p>
-                          <p style={{ fontSize: 11, color: 'var(--gris-medio)' }}>{doc.email}</p>
+                          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{doc.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td style={{ fontSize: 13, color: 'var(--gris-oscuro)' }}>{doc.cedula}</td>
+                    <td className="hide-mobile" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{doc.cedula}</td>
                     <td>
                       <span className={`badge ${doc.tipo === 'tiempo_completo' ? 'badge-blue' : 'badge-yellow'}`}>
                         {doc.tipo === 'tiempo_completo' ? 'TC' : 'TP'}
                       </span>
                     </td>
-                    <td>
+                    <td className="hide-mobile">
                       {doc.tiene_acceso ? (
                         <span className="badge badge-green">Con acceso</span>
                       ) : (
@@ -253,7 +253,7 @@ export default function Docentes() {
         )}
       </div>
 
-      {/* ── MODAL CREAR/EDITAR DOCENTE ── */}
+      {/*  MODAL CREAR/EDITAR DOCENTE  */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div className="modal">
@@ -325,7 +325,7 @@ export default function Docentes() {
         </div>
       )}
 
-      {/* ── MODAL CREAR ACCESO ── */}
+      {/*  MODAL CREAR ACCESO  */}
       {modalAcceso && docenteSeleccionado && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalAcceso(false)}>
           <div className="modal" style={{ maxWidth: 420 }}>
@@ -365,7 +365,7 @@ export default function Docentes() {
         </div>
       )}
 
-      {/* ── MODAL HABILIDADES ── */}
+      {/*  MODAL HABILIDADES  */}
       {modalHabilidades && docenteSeleccionado && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalHabilidades(false)}>
           <div className="modal" style={{ maxWidth: 580 }}>
@@ -406,7 +406,7 @@ export default function Docentes() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {seleccionadas.includes(a.id) && (
-                        <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>
+                        <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}></span>
                       )}
                     </div>
                     <div style={{ flex: 1 }}>

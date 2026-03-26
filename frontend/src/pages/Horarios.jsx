@@ -11,6 +11,7 @@ import {
   getCarreras, getPeriodos,
   getDocentes, getAsignaturas, updateHorario
 } from '../services/api'
+import ConfirmModal from '../components/ConfirmModal'
 
 // Dias de la semana disponibles para asignacion
 const DIAS_OPTIONS = [
@@ -52,29 +53,25 @@ const TablaJornada = ({ jornada, titulo, horarioTxt, horarios, asignaturas, nive
   return (
     <div style={{ marginBottom: 28 }}>
       {/* Cabecera de jornada */}
-      <div style={{
-        background: colorHeader,
-        color: '#fff',
-        padding: '10px 18px',
-        borderRadius: '8px 8px 0 0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <span style={{ fontWeight: 700, fontSize: 13 }}>{titulo}</span>
-        <span style={{ fontSize: 12, opacity: 0.75 }}>{horarioTxt}</span>
+      <div className="jornada-header" style={{ background: colorHeader }}>
+        <span className="jornada-header-title">{titulo}</span>
+        <span className="jornada-header-time">{horarioTxt}</span>
       </div>
 
       {/* Tabla de datos */}
-      <div style={{ overflowX: 'auto', border: '1px solid var(--gris-borde)', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
+      <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
-              {['Modulo', 'Fecha inicio', 'Fecha fin', 'Asignatura', 'Nivel', 'Paralelo', 'Horario', 'Docente', 'Acciones'].map((col, i) => (
-                <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--gris-borde)', whiteSpace: 'nowrap' }}>
-                  {col}
-                </th>
-              ))}
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Modulo</th>
+              <th className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Fecha inicio</th>
+              <th className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Fecha fin</th>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Asignatura</th>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Nivel</th>
+              <th className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Paralelo</th>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Horario</th>
+              <th className="hide-tablet" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Docente</th>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 11.5, color: '#475569', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -94,10 +91,10 @@ const TablaJornada = ({ jornada, titulo, horarioTxt, horarios, asignaturas, nive
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: '#374151' }}>
                       {modulo?.nombre || 'Modulo'}
                     </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--gris-medio)', fontSize: 12 }}>
+                    <td className="hide-mobile" style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>
                       {modulo?.fecha_inicio || '-'}
                     </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--gris-medio)', fontSize: 12 }}>
+                    <td className="hide-mobile" style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>
                       {modulo?.fecha_fin || '-'}
                     </td>
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: '#1e293b' }}>
@@ -106,49 +103,19 @@ const TablaJornada = ({ jornada, titulo, horarioTxt, horarios, asignaturas, nive
                     <td style={{ padding: '10px 14px', textAlign: 'center' }}>
                       <span className="badge badge-blue">{getNivelNumero(h.nivel_id)}</span>
                     </td>
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    <td className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'center' }}>
                       <span className="badge badge-yellow">{h.paralelo}</span>
                     </td>
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap' }}>
                       {h.hora_inicio} - {h.hora_fin}
                     </td>
-                    <td style={{ padding: '10px 14px', color: '#374151' }}>
+                    <td className="hide-tablet" style={{ padding: '10px 14px', color: '#374151' }}>
                       {getNombreDocente(h.docente_id)}
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        {/* Boton editar */}
-                        <button
-                          onClick={() => onEditar(h)}
-                          style={{
-                            background: 'var(--azul-claro)',
-                            color: 'var(--azul)',
-                            border: 'none',
-                            borderRadius: 6,
-                            padding: '4px 10px',
-                            cursor: 'pointer',
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Editar
-                        </button>
-                        {/* Boton eliminar */}
-                        <button
-                          onClick={() => onEliminar(h.id)}
-                          style={{
-                            background: 'var(--rojo-claro)',
-                            color: 'var(--rojo-itq)',
-                            border: 'none',
-                            borderRadius: 6,
-                            padding: '4px 10px',
-                            cursor: 'pointer',
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Eliminar
-                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => onEditar(h)}>Editar</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => onEliminar(h.id)}>Eliminar</button>
                       </div>
                     </td>
                   </tr>
@@ -186,6 +153,10 @@ export default function Horarios() {
   const [modalGenerar, setModalGenerar] = useState(false)
   const [modalEditar, setModalEditar]   = useState(false)
   const [horarioEditando, setHorarioEditando] = useState(null)
+
+  // Confirm modals
+  const [confirmEliminar, setConfirmEliminar] = useState({ open: false, id: null, loading: false })
+  const [confirmLimpiar,  setConfirmLimpiar]  = useState({ open: false, loading: false })
 
   // Formulario de generacion
   const [formGenerar, setFormGenerar]   = useState({ periodo_id: '', modulo_id: '', carrera_id: '', usar_ia: false })
@@ -288,34 +259,46 @@ export default function Horarios() {
   }
 
   /**
-   * Elimina un horario individual tras confirmacion del usuario.
+   * Abre confirm modal para eliminar un horario individual.
    */
-  const eliminar = async (id) => {
-    if (!confirm('Eliminar este horario?')) return
+  const eliminar = (id) => {
+    setConfirmEliminar({ open: true, id, loading: false })
+  }
+
+  const confirmarEliminar = async () => {
+    setConfirmEliminar(prev => ({ ...prev, loading: true }))
     try {
-      await deleteHorario(id)
+      await deleteHorario(confirmEliminar.id)
       setExito('Horario eliminado correctamente')
+      setConfirmEliminar({ open: false, id: null, loading: false })
       cargarHorarios()
       setTimeout(() => setExito(''), 3000)
     } catch {
       setError('Error al eliminar el horario')
+      setConfirmEliminar(prev => ({ ...prev, loading: false }))
     }
   }
 
   /**
-   * Elimina todos los horarios del modulo seleccionado.
+   * Abre confirm modal para limpiar todos los horarios del modulo.
    */
-  const limpiarModulo = async () => {
+  const limpiarModulo = () => {
     if (!filtros.modulo_id) { setError('Selecciona un modulo para limpiar'); return }
-    if (!confirm('Eliminar TODOS los horarios de este modulo?')) return
+    setConfirmLimpiar({ open: true, loading: false })
+  }
+
+  const confirmarLimpiarModulo = async () => {
+    setConfirmLimpiar(prev => ({ ...prev, loading: true }))
     try {
       const horariosModulo = horarios.filter(h => h.modulo_id === filtros.modulo_id)
       await Promise.all(horariosModulo.map(h => deleteHorario(h.id)))
       setExito(`${horariosModulo.length} horarios eliminados`)
+      setConfirmLimpiar({ open: false, loading: false })
       cargarHorarios()
       setTimeout(() => setExito(''), 3000)
     } catch {
       setError('Error al limpiar el modulo')
+      setConfirmLimpiar(prev => ({ ...prev, loading: false }))
     }
   }
 
@@ -395,10 +378,10 @@ export default function Horarios() {
         <div className="topbar-actions">
           {filtros.modulo_id && (
             <button className="btn btn-danger" onClick={limpiarModulo}>
-              Limpiar modulo
+              <span className="hide-mobile">Limpiar</span><span> modulo</span>
             </button>
           )}
-          <button className="btn btn-success" onClick={() => navigate('/reportes')}>
+          <button className="btn btn-success hide-mobile" onClick={() => navigate('/reportes')}>
             Ver Reportes
           </button>
           <button className="btn btn-primary" onClick={() => { setResultado(null); setError(''); setModalGenerar(true) }}>
@@ -413,7 +396,7 @@ export default function Horarios() {
 
       {/* Filtros */}
       <div className="card" style={{ padding: 16, marginBottom: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        <div className="filters-grid">
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Periodo academico</label>
             <select value={filtros.periodo_id} onChange={e => onCambioPeriodoFiltro(e.target.value)}>
@@ -712,6 +695,28 @@ export default function Horarios() {
           </div>
         </div>
       )}
+
+      {/* Modal confirm: eliminar horario individual */}
+      <ConfirmModal
+        open={confirmEliminar.open}
+        title="Eliminar horario"
+        message="Esta accion eliminara permanentemente este horario. No se puede deshacer."
+        confirmLabel="Eliminar"
+        loading={confirmEliminar.loading}
+        onConfirm={confirmarEliminar}
+        onCancel={() => setConfirmEliminar({ open: false, id: null, loading: false })}
+      />
+
+      {/* Modal confirm: limpiar modulo completo */}
+      <ConfirmModal
+        open={confirmLimpiar.open}
+        title="Limpiar modulo"
+        message="Se eliminaran TODOS los horarios de este modulo. Esta accion no se puede deshacer."
+        confirmLabel="Eliminar todo"
+        loading={confirmLimpiar.loading}
+        onConfirm={confirmarLimpiarModulo}
+        onCancel={() => setConfirmLimpiar({ open: false, loading: false })}
+      />
     </>
   )
 }

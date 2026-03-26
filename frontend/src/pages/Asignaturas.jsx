@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getCarreras, getAsignaturas, createAsignatura, copiarMalla } from '../services/api'
+import ConfirmModal from '../components/ConfirmModal'
 
 const formInicial = { nombre: '', codigo: '', horas_modulo: '', nivel_id: '', numero_modulo: 1 }
 
@@ -18,6 +19,7 @@ export default function Asignaturas() {
     const [modalCopiar, setModalCopiar]       = useState(false)
     const [carreraOrigenId, setCarreraOrigenId] = useState('')
     const [copiando, setCopiando]             = useState(false)
+    const [confirmCopiar, setConfirmCopiar]   = useState(false)
     const location = useLocation()
 
     useEffect(() => {
@@ -91,13 +93,17 @@ export default function Asignaturas() {
         }
     }
 
-    const ejecutarCopia = async () => {
+    const ejecutarCopia = () => {
         if (!carreraOrigenId) return
-        if (!confirm('Esto copiara todas las asignaturas de la carrera seleccionada. Continuar?')) return
+        setConfirmCopiar(true)
+    }
+
+    const confirmarCopia = async () => {
         setCopiando(true)
         try {
             const res = await copiarMalla(carreraSeleccionada.id, carreraOrigenId)
             setExito(res.data.mensaje)
+            setConfirmCopiar(false)
             setModalCopiar(false)
             const r = await getAsignaturas(carreraSeleccionada.id)
             setAsignaturas(r.data)
@@ -188,7 +194,7 @@ export default function Asignaturas() {
             {!carreraSeleccionada ? (
                 <div className="card">
                     <div className="empty-state">
-                        <div className="empty-state-icon">🎓</div>
+                        <div className="empty-state-icon"></div>
                         <p>Selecciona una carrera para ver su malla curricular</p>
                     </div>
                 </div>
@@ -346,7 +352,7 @@ export default function Asignaturas() {
                             <button className="modal-close" onClick={() => setModalCopiar(false)}>×</button>
                         </div>
                         {error && <div className="alert alert-error">{error}</div>}
-                        <p style={{ fontSize: 13, color: 'var(--gris-medio)', marginBottom: 16 }}>
+                        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
                             Selecciona la carrera de donde quieres copiar las asignaturas hacia <strong>{carreraSeleccionada.nombre}</strong>.
                         </p>
                         <div className="form-group">
@@ -370,6 +376,18 @@ export default function Asignaturas() {
                     </div>
                 </div>
             )}
+
+            {/* Modal confirm: copiar malla curricular */}
+            <ConfirmModal
+                open={confirmCopiar}
+                title="Copiar malla curricular"
+                message={`Se copiaran todas las asignaturas de la carrera seleccionada hacia ${carreraSeleccionada?.nombre}. Las asignaturas que ya existan no se duplicaran.`}
+                confirmLabel="Copiar malla"
+                loading={copiando}
+                danger={false}
+                onConfirm={confirmarCopia}
+                onCancel={() => setConfirmCopiar(false)}
+            />
         </>
     )
 }

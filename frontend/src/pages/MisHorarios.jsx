@@ -16,19 +16,22 @@ const TablaJornada = ({ jornada, titulo, horarioTxt, horarios, asignaturas, carr
 
   return (
     <div style={{ marginBottom: 28 }}>
-      <div style={{ background: jornada === 'matutina' ? '#1e40af' : '#374151', color: '#fff', padding: '10px 18px', borderRadius: '8px 8px 0 0', display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontWeight: 700, fontSize: 13 }}>{jornada === 'matutina' ? '☀️' : '🌙'} {titulo}</span>
-        <span style={{ fontSize: 12, opacity: 0.8 }}>{horarioTxt}</span>
+      <div className="jornada-header" style={{ background: jornada === 'matutina' ? '#1e40af' : '#374151' }}>
+        <span className="jornada-header-title">{titulo}</span>
+        <span className="jornada-header-time">{horarioTxt}</span>
       </div>
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 8px 8px' }}>
+      <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
-              {['Módulo', 'Fecha inicio', 'Fecha fin', 'Asignatura', 'Carrera', 'Nivel', 'Paralelo', 'Horario'].map((col, i) => (
-                <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid #e5e7eb' }}>
-                  {col}
-                </th>
-              ))}
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Módulo</th>
+              <th className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Fecha inicio</th>
+              <th className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Fecha fin</th>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Asignatura</th>
+              <th className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Carrera</th>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Nivel</th>
+              <th className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Paralelo</th>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: '#475569', borderBottom: '1px solid var(--border)' }}>Horario</th>
             </tr>
           </thead>
           <tbody>
@@ -37,19 +40,15 @@ const TablaJornada = ({ jornada, titulo, horarioTxt, horarios, asignaturas, carr
               return (
                 <tr key={h.id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '10px 14px', fontWeight: 600 }}>{modulo?.nombre || 'Módulo'}</td>
-                  <td style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>{modulo?.fecha_inicio || '-'}</td>
-                  <td style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>{modulo?.fecha_fin || '-'}</td>
+                  <td className="hide-mobile" style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>{modulo?.fecha_inicio || '-'}</td>
+                  <td className="hide-mobile" style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>{modulo?.fecha_fin || '-'}</td>
                   <td style={{ padding: '10px 14px', fontWeight: 600 }}>{getNombreAsignatura(h.asignatura_id)}</td>
-                  <td style={{ padding: '10px 14px', fontSize: 12 }}>{getNombreCarrera(h.carrera_id)}</td>
+                  <td className="hide-mobile" style={{ padding: '10px 14px', fontSize: 12 }}>{getNombreCarrera(h.carrera_id)}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                    <span style={{ background: '#dbeafe', color: '#1e40af', borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 700 }}>
-                      {getNivelNumero(h.nivel_id)}
-                    </span>
+                    <span className="badge badge-blue">{getNivelNumero(h.nivel_id)}</span>
                   </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                    <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>
-                      {h.paralelo}
-                    </span>
+                  <td className="hide-mobile" style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-yellow">{h.paralelo}</span>
                   </td>
                   <td style={{ padding: '10px 14px', fontWeight: 600 }}>{h.hora_inicio} - {h.hora_fin}</td>
                 </tr>
@@ -111,7 +110,7 @@ export default function MisHorarios() {
     <>
       <div className="topbar">
         <div>
-          <h1>📆 Mis Horarios</h1>
+          <h1> Mis Horarios</h1>
           <p>Bienvenido, {usuario?.nombre} {usuario?.apellido}</p>
         </div>
       </div>
@@ -119,7 +118,7 @@ export default function MisHorarios() {
       {!usuario?.docente_id ? (
         <div className="card">
           <div className="empty-state">
-            <p style={{ fontSize: 32 }}>⚠️</p>
+            <p style={{ fontSize: 32 }}></p>
             <p>Tu cuenta no está vinculada a un docente.</p>
             <p style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
               Contacta al coordinador para vincular tu cuenta.
@@ -129,7 +128,7 @@ export default function MisHorarios() {
       ) : (
         <>
           <div className="card" style={{ padding: 16, marginBottom: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="filters-grid-2">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Período</label>
                 <select value={periodoId} onChange={e => onCambioPeriodo(e.target.value)}>
@@ -150,7 +149,7 @@ export default function MisHorarios() {
           <div className="card">
             {horarios.length === 0 ? (
               <div className="empty-state">
-                <p style={{ fontSize: 32 }}>📆</p>
+                <p style={{ fontSize: 32 }}></p>
                 <p>No tienes horarios asignados aún.</p>
               </div>
             ) : (
