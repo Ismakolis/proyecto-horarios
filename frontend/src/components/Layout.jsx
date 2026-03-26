@@ -1,65 +1,59 @@
 /**
  * Layout.jsx
- * Componente principal de estructura: sidebar + contenido.
- * Renderiza la navegacion segun el rol del usuario autenticado.
+ * Estructura principal: sidebar estilo Kenjo + contenido.
  */
-
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuth } from '../context/useAuth'
 
-// Elementos de navegacion por rol
+const ICONS = {
+  dashboard:    '◻',
+  docentes:     '👤',
+  carreras:     '🎓',
+  asignaturas:  '📚',
+  periodos:     '📅',
+  horarios:     '🗓',
+  reportes:     '📊',
+  mishorarios:  '🗓',
+}
+
 const navCoordinador = [
-  { path: '/',            label: 'Dashboard',   icon: 'D' },
-  { path: '/docentes',    label: 'Docentes',    icon: 'P' },
-  { path: '/carreras',    label: 'Carreras',    icon: 'C' },
-  { path: '/asignaturas', label: 'Asignaturas', icon: 'A' },
-  { path: '/periodos',    label: 'Periodos',    icon: 'M' },
-  { path: '/horarios',    label: 'Horarios',    icon: 'H' },
-  { path: '/reportes',    label: 'Reportes',    icon: 'R' },
+  { path: '/',            label: 'Dashboard',   icon: ICONS.dashboard },
+  { path: '/docentes',    label: 'Docentes',    icon: ICONS.docentes },
+  { path: '/carreras',    label: 'Carreras',    icon: ICONS.carreras },
+  { path: '/asignaturas', label: 'Asignaturas', icon: ICONS.asignaturas },
+  { path: '/periodos',    label: 'Periodos',    icon: ICONS.periodos },
+  { path: '/horarios',    label: 'Horarios',    icon: ICONS.horarios },
+  { path: '/reportes',    label: 'Reportes',    icon: ICONS.reportes },
 ]
-
 const navDocente = [
-  { path: '/mis-horarios', label: 'Mis Horarios', icon: 'H' },
+  { path: '/mis-horarios', label: 'Mis Horarios', icon: ICONS.mishorarios },
 ]
-
 const navAdministrativo = [
-  { path: '/',          label: 'Dashboard', icon: 'D' },
-  { path: '/horarios',  label: 'Horarios',  icon: 'H' },
-  { path: '/reportes',  label: 'Reportes',  icon: 'R' },
+  { path: '/',          label: 'Dashboard', icon: ICONS.dashboard },
+  { path: '/horarios',  label: 'Horarios',  icon: ICONS.horarios },
+  { path: '/reportes',  label: 'Reportes',  icon: ICONS.reportes },
 ]
 
 export default function Layout() {
   const { usuario, cerrarSesion, esCoordinador, esDocente } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate  = useNavigate()
+  const location  = useLocation()
 
-  // Redirigir al docente si intenta acceder al dashboard
   useEffect(() => {
-    if (esDocente && location.pathname === '/') {
-      navigate('/mis-horarios')
-    }
+    if (esDocente && location.pathname === '/') navigate('/mis-horarios')
   }, [esDocente, location.pathname, navigate])
 
-  const handleLogout = () => {
-    cerrarSesion()
-    navigate('/login')
-  }
+  const handleLogout = () => { cerrarSesion(); navigate('/login') }
 
-  // Seleccionar menu segun rol
-  const navItems = esCoordinador
-    ? navCoordinador
-    : esDocente
-    ? navDocente
-    : navAdministrativo
-
+  const navItems = esCoordinador ? navCoordinador : esDocente ? navDocente : navAdministrativo
   const rolLabel = usuario?.rol || ''
+  const initiales = `${usuario?.nombre?.[0] || ''}${usuario?.apellido?.[0] || ''}`.toUpperCase()
 
   return (
     <div className="layout">
-      {/* Sidebar de navegacion */}
       <aside className="sidebar">
-        {/* Logo institucional */}
+        {/* Logo */}
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">ITQ</div>
           <div className="sidebar-logo-text">
@@ -68,7 +62,7 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Menu de navegacion */}
+        {/* Nav */}
         <nav className="sidebar-nav">
           {navItems.map(item => (
             <button
@@ -76,33 +70,20 @@ export default function Layout() {
               className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
               onClick={() => navigate(item.path)}
             >
-              <span className="nav-item-icon"
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 4,
-                  background: location.pathname === item.path ? 'var(--rojo-itq)' : '#2a2a2a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color: '#fff',
-                  flexShrink: 0,
-                }}
-              >
-                {item.icon}
-              </span>
+              <span className="nav-item-icon">{item.icon}</span>
               {item.label}
             </button>
           ))}
         </nav>
 
-        {/* Informacion del usuario */}
+        {/* Footer */}
         <div className="sidebar-footer">
-          <div className="user-info">
-            <strong>{usuario?.nombre} {usuario?.apellido}</strong>
-            <span className={`user-role-badge ${rolLabel}`}>{rolLabel}</span>
+          <div className="user-card">
+            <div className="user-avatar">{initiales}</div>
+            <div className="user-card-info">
+              <strong>{usuario?.nombre} {usuario?.apellido}</strong>
+              <span className={`user-role-badge ${rolLabel}`}>{rolLabel}</span>
+            </div>
           </div>
           <button className="btn-logout" onClick={handleLogout}>
             Cerrar sesion
@@ -110,7 +91,6 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Contenido principal */}
       <main className="main-content">
         <Outlet />
       </main>

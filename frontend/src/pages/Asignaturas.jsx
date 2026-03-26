@@ -177,13 +177,21 @@ export default function Asignaturas() {
                             <div key={nivel.id} className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
 
                                 {/* Header nivel */}
-                                <div style={{ background: '#1a1a1a', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ background: 'var(--negro)', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '10px 10px 0 0' }}>
                                     <span style={{ fontWeight: 700, fontSize: 14 }}>
-                                        📚 {nivel.nombre || `Nivel ${nivel.numero}`}
+                                        {nivel.nombre || `Nivel ${nivel.numero}`}
                                     </span>
-                                    <span style={{ fontSize: 12, color: '#aaa' }}>
-                                        {asigNivel.length} / 6 asignatura(s)
-                                    </span>
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                        <span style={{ fontSize: 11, background: 'rgba(59,130,246,0.25)', color: '#93c5fd', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
+                                            Manana: {nivel.paralelos_matutina || 0} paralelo(s)
+                                        </span>
+                                        <span style={{ fontSize: 11, background: 'rgba(124,58,237,0.25)', color: '#c4b5fd', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
+                                            Noche: {nivel.paralelos_nocturna || 0} paralelo(s)
+                                        </span>
+                                        <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                                            {asigNivel.length} / 6 asignaturas
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Módulos */}

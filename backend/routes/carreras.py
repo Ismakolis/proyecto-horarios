@@ -5,12 +5,12 @@ from database import get_db
 from schemas.carreras import (
     CarreraCreate, CarreraUpdate, CarreraResponse,
     CarreraConNivelesResponse,
-    NivelCreate, NivelResponse,
+    NivelCreate, NivelUpdate, NivelResponse,
     AsignaturaCreate, AsignaturaUpdate, AsignaturaResponse
 )
 from services.carreras_service import (
     crear_carrera, listar_carreras, obtener_carrera,
-    actualizar_carrera, eliminar_carrera, agregar_nivel,
+    actualizar_carrera, eliminar_carrera, agregar_nivel, actualizar_nivel,
     crear_asignatura, listar_asignaturas, actualizar_asignatura
 )
 from utils.jwt import solo_coordinador, cualquier_rol
@@ -110,24 +110,12 @@ async def agregar_nivel_a_carrera(
 
 
 @router.put("/{carrera_id}/niveles/{nivel_id}", response_model=NivelResponse)
-async def actualizar_nivel(
+async def actualizar_nivel_route(
     carrera_id: str,
     nivel_id: str,
-    data: NivelCreate,
+    data: NivelUpdate,
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(solo_coordinador),
 ):
-    """Actualizar paralelos de un nivel"""
-    from sqlalchemy import select
-    r = await db.execute(
-        select(Nivel).where(Nivel.id == nivel_id, Nivel.carrera_id == carrera_id)
-    )
-    nivel = r.scalar_one_or_none()
-    if not nivel:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Nivel no encontrado")
-    nivel.paralelos = data.paralelos
-    nivel.nombre = data.nombre or nivel.nombre
-    await db.flush()
-    await db.refresh(nivel)
-    return nivel
+    """Actualizar paralelos matutina/nocturna de un nivel"""
+    return await actualizar_nivel(carrera_id, nivel_id, data, db)

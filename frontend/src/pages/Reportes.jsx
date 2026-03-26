@@ -164,7 +164,7 @@ export default function Reportes() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 16px', borderRadius: 8 }}>
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 14 }}>{nivelSeleccionado?.nombre}</p>
-                  <p style={{ fontSize: 12, color: '#6b7280' }}>{nivelSeleccionado?.paralelos} paralelo(s)</p>
+                  <p style={{ fontSize: 12, color: '#6b7280' }}>{(nivelSeleccionado?.paralelos_matutina||0)}M / {(nivelSeleccionado?.paralelos_nocturna||0)}N paralelos</p>
                 </div>
                 <button
                   className="btn btn-success"

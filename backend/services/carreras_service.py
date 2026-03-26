@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from models.models import Carrera, Nivel, Asignatura
-from schemas.carreras import CarreraCreate, CarreraUpdate, AsignaturaCreate, AsignaturaUpdate, NivelCreate
+from schemas.carreras import CarreraCreate, CarreraUpdate, AsignaturaCreate, AsignaturaUpdate, NivelCreate, NivelUpdate
 import uuid
 
 
@@ -32,7 +32,8 @@ async def crear_carrera(data: CarreraCreate, db: AsyncSession) -> Carrera:
             carrera_id=carrera_id,
             numero=niv.numero,
             nombre=niv.nombre or f"Nivel {niv.numero}",
-            paralelos=niv.paralelos,
+            paralelos_matutina=niv.paralelos_matutina,
+            paralelos_nocturna=niv.paralelos_nocturna,
         )
         db.add(nivel)
     await db.flush()
@@ -102,9 +103,26 @@ async def agregar_nivel(carrera_id: str, data: NivelCreate, db: AsyncSession) ->
         carrera_id=carrera_id,
         numero=data.numero,
         nombre=data.nombre or f"Nivel {data.numero}",
-        paralelos=data.paralelos,
+        paralelos_matutina=data.paralelos_matutina,
+        paralelos_nocturna=data.paralelos_nocturna,
     )
     db.add(nivel)
+    await db.flush()
+    await db.refresh(nivel)
+    return nivel
+
+
+async def actualizar_nivel(carrera_id: str, nivel_id: str, data, db: AsyncSession) -> Nivel:
+    r = await db.execute(
+        select(Nivel).where(Nivel.id == nivel_id, Nivel.carrera_id == carrera_id)
+    )
+    nivel = r.scalar_one_or_none()
+    if not nivel:
+        raise HTTPException(status_code=404, detail="Nivel no encontrado")
+    if data.paralelos_matutina is not None:
+        nivel.paralelos_matutina = data.paralelos_matutina
+    if data.paralelos_nocturna is not None:
+        nivel.paralelos_nocturna = data.paralelos_nocturna
     await db.flush()
     await db.refresh(nivel)
     return nivel

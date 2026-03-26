@@ -283,18 +283,20 @@ async def generar_horarios_automatico(data: GenerarHorarioRequest, db: AsyncSess
     docente_idx = 0
 
     for nivel in niveles:
-        paralelos = [chr(65 + i) for i in range(nivel.paralelos)]
+        # Paralelos separados por jornada
+        paralelos_mat = [chr(65 + i) for i in range(nivel.paralelos_matutina)]
+        paralelos_noc = [chr(65 + i) for i in range(nivel.paralelos_nocturna)]
         
         # Asignaturas de este nivel en este módulo (máx 2)
         asigs_nivel = [a for a in asignaturas if a.nivel_id == nivel.id]
         if not asigs_nivel:
             continue
 
-        for paralelo in paralelos:
-            for jornada, slots, horas_fin in [
-                (Jornada.MATUTINA, HORARIOS_MATUTINA, ["10:00", "12:00"]),
-                (Jornada.NOCTURNA, HORARIOS_NOCTURNA, ["20:00", "21:30"]),
-            ]:
+        for jornada, paralelos_jornada, slots, horas_fin in [
+            (Jornada.MATUTINA, paralelos_mat, HORARIOS_MATUTINA, ["10:00", "12:00"]),
+            (Jornada.NOCTURNA, paralelos_noc, HORARIOS_NOCTURNA, ["20:00", "21:30"]),
+        ]:
+            for paralelo in paralelos_jornada:
                 for idx_asig, asignatura in enumerate(asigs_nivel[:2]):
                     slot = slots[idx_asig] if idx_asig < len(slots) else slots[0]
                     hora_fin = horas_fin[idx_asig] if idx_asig < len(horas_fin) else horas_fin[0]
@@ -396,18 +398,21 @@ async def _construir_contexto_ia(data, modulo, db: AsyncSession) -> dict:
             )
         )
         asigs = r.scalars().all()
-        paralelos = [chr(65 + i) for i in range(nivel.paralelos)]
-        for asig in asigs:
-            for paralelo in paralelos:
-                asignaturas_contexto.append({
-                    "id":            f"{asig.id}|{nivel.id}|{paralelo}",  # clave compuesta
-                    "asignatura_id": asig.id,
-                    "nivel_id":      nivel.id,
-                    "nivel_numero":  nivel.numero,
-                    "paralelo":      paralelo,
-                    "nombre":        asig.nombre,
-                    "horas_modulo":  asig.horas_modulo,
-                })
+        paralelos_mat = [chr(65 + i) for i in range(nivel.paralelos_matutina)]
+        paralelos_noc = [chr(65 + i) for i in range(nivel.paralelos_nocturna)]
+        for jornada_str, paralelos_j in [("matutina", paralelos_mat), ("nocturna", paralelos_noc)]:
+            for asig in asigs:
+                for paralelo in paralelos_j:
+                    asignaturas_contexto.append({
+                        "id":            f"{asig.id}|{nivel.id}|{paralelo}|{jornada_str}",
+                        "asignatura_id": asig.id,
+                        "nivel_id":      nivel.id,
+                        "nivel_numero":  nivel.numero,
+                        "paralelo":      paralelo,
+                        "jornada":       jornada_str,
+                        "nombre":        asig.nombre,
+                        "horas_modulo":  asig.horas_modulo,
+                    })
 
     # Docentes activos con su carga actual y disponibilidad
     r = await db.execute(select(Docente).where(Docente.activo == True))

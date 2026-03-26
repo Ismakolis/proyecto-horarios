@@ -6,7 +6,8 @@ from typing import Optional, List
 class NivelCreate(BaseModel):
     numero: int
     nombre: Optional[str] = None
-    paralelos: int = 1
+    paralelos_matutina: int = 1
+    paralelos_nocturna: int = 1
 
     @field_validator("numero")
     @classmethod
@@ -15,11 +16,25 @@ class NivelCreate(BaseModel):
             raise ValueError("El numero de nivel debe estar entre 1 y 20")
         return v
 
-    @field_validator("paralelos")
+    @field_validator("paralelos_matutina", "paralelos_nocturna")
     @classmethod
     def paralelos_valido(cls, v):
-        if v < 1 or v > 10:
-            raise ValueError("Los paralelos deben estar entre 1 y 10")
+        if v < 0 or v > 10:
+            raise ValueError("Los paralelos deben estar entre 0 y 10")
+        return v
+
+
+class NivelUpdate(BaseModel):
+    paralelos_matutina: Optional[int] = None
+    paralelos_nocturna: Optional[int] = None
+
+    @field_validator("paralelos_matutina", "paralelos_nocturna")
+    @classmethod
+    def paralelos_valido(cls, v):
+        if v is None:
+            return v
+        if v < 0 or v > 10:
+            raise ValueError("Los paralelos deben estar entre 0 y 10")
         return v
 
 
@@ -27,7 +42,8 @@ class NivelResponse(BaseModel):
     id: str
     numero: int
     nombre: Optional[str]
-    paralelos: int
+    paralelos_matutina: int
+    paralelos_nocturna: int
     carrera_id: str
 
     model_config = {"from_attributes": True}

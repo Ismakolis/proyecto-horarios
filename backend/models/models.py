@@ -90,7 +90,8 @@ class Nivel(Base):
     carrera_id = Column(String, ForeignKey("carreras.id"), nullable=False)
     numero = Column(Integer, nullable=False)  # 1, 2, 3...
     nombre = Column(String(50), nullable=True)  # "Primer Nivel", etc.
-    paralelos = Column(Integer, nullable=False, default=1)
+    paralelos_matutina = Column(Integer, nullable=False, default=1)  # paralelos en jornada matutina
+    paralelos_nocturna = Column(Integer, nullable=False, default=1)  # paralelos en jornada nocturna
 
     # Relaciones
     carrera = relationship("Carrera", back_populates="niveles")
