@@ -1,8 +1,14 @@
+/**
+ * Docentes.jsx
+ * Gestion de docentes y disponibilidad horaria.
+ * Incluye validaciones de frontend antes de enviar al backend.
+ */
+
 import { useEffect, useState } from 'react'
 import { getDocentes, createDocente, updateDocente, deleteDocente } from '../services/api'
 
-const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado']
-const JORNADAS = ['matutina','nocturna']
+const DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
+const JORNADAS = ['matutina', 'nocturna']
 
 const formInicial = {
   cedula: '', nombre: '', apellido: '', email: '',
@@ -10,14 +16,18 @@ const formInicial = {
   disponibilidades: []
 }
 
+// Regex para validar que un campo solo tenga letras, espacios y guiones
+const SOLO_LETRAS = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-']+$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function Docentes() {
-  const [docentes, setDocentes] = useState([])
-  const [cargando, setCargando] = useState(true)
-  const [modal, setModal] = useState(false)
-  const [editando, setEditando] = useState(null)
-  const [form, setForm] = useState(formInicial)
-  const [error, setError] = useState('')
-  const [exito, setExito] = useState('')
+  const [docentes, setDocentes]   = useState([])
+  const [cargando, setCargando]   = useState(true)
+  const [modal, setModal]         = useState(false)
+  const [editando, setEditando]   = useState(null)
+  const [form, setForm]           = useState(formInicial)
+  const [error, setError]         = useState('')
+  const [exito, setExito]         = useState('')
   const [guardando, setGuardando] = useState(false)
 
   const cargar = async () => {
@@ -67,20 +77,61 @@ export default function Docentes() {
   const estaSeleccionado = (dia, jornada) =>
     form.disponibilidades.some(d => d.dia === dia && d.jornada === jornada)
 
+  // Validacion de formulario antes de enviar al backend
+  const validar = () => {
+    const nombre   = form.nombre.trim()
+    const apellido = form.apellido.trim()
+    const email    = form.email.trim()
+    const cedula   = form.cedula.trim()
+
+    if (!nombre) return 'El nombre es obligatorio'
+    if (nombre.length < 2) return 'El nombre debe tener al menos 2 caracteres'
+    if (!SOLO_LETRAS.test(nombre)) return 'El nombre solo puede contener letras, espacios y guiones'
+
+    if (!apellido) return 'El apellido es obligatorio'
+    if (apellido.length < 2) return 'El apellido debe tener al menos 2 caracteres'
+    if (!SOLO_LETRAS.test(apellido)) return 'El apellido solo puede contener letras, espacios y guiones'
+
+    if (!email) return 'El email es obligatorio'
+    if (!EMAIL_REGEX.test(email)) return 'El email no tiene un formato valido'
+
+    if (!editando) {
+      if (!cedula) return 'La cedula es obligatoria'
+      if (!/^\d{10}$/.test(cedula)) return 'La cedula debe tener exactamente 10 digitos numericos'
+    }
+
+    if (form.titulo) {
+      const titulo = form.titulo.trim()
+      if (titulo.length > 200) return 'El titulo no puede superar los 200 caracteres'
+    }
+
+    return null // sin errores
+  }
+
   const guardar = async () => {
+    const errValidacion = validar()
+    if (errValidacion) { setError(errValidacion); return }
+
     setGuardando(true)
     setError('')
     try {
       if (editando) {
         await updateDocente(editando.id, {
-          nombre: form.nombre,
-          apellido: form.apellido,
-          email: form.email,
-          tipo: form.tipo,
-          titulo: form.titulo,
+          nombre:   form.nombre.trim(),
+          apellido: form.apellido.trim(),
+          email:    form.email.trim(),
+          tipo:     form.tipo,
+          titulo:   form.titulo.trim() || null,
         })
       } else {
-        await createDocente(form)
+        await createDocente({
+          ...form,
+          nombre:   form.nombre.trim(),
+          apellido: form.apellido.trim(),
+          email:    form.email.trim(),
+          cedula:   form.cedula.trim(),
+          titulo:   form.titulo.trim() || null,
+        })
       }
       setExito(editando ? 'Docente actualizado correctamente' : 'Docente creado correctamente')
       setModal(false)
@@ -99,7 +150,7 @@ export default function Docentes() {
   }
 
   const desactivar = async (doc) => {
-    if (!confirm(`¿Desactivar a ${doc.nombre} ${doc.apellido}?`)) return
+    if (!confirm(`Desactivar a ${doc.nombre} ${doc.apellido}?`)) return
     try {
       await deleteDocente(doc.id)
       setExito('Docente desactivado')
@@ -110,12 +161,27 @@ export default function Docentes() {
     }
   }
 
+  // Bloquear numeros en campos de texto de nombre/apellido
+  const soloLetras = (e) => {
+    const char = e.key
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-']+$/.test(char) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(char)) {
+      e.preventDefault()
+    }
+  }
+
+  // Bloquear letras en campo de cedula
+  const soloNumeros = (e) => {
+    if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+      e.preventDefault()
+    }
+  }
+
   return (
     <>
       <div className="topbar">
         <div>
-          <h1>👨‍🏫 Docentes</h1>
-          <p>Gestión de docentes y disponibilidad</p>
+          <h1>Docentes</h1>
+          <p>Gestion de docentes y disponibilidad</p>
         </div>
         <button className="btn btn-primary" onClick={abrirCrear}>+ Nuevo docente</button>
       </div>
@@ -128,14 +194,14 @@ export default function Docentes() {
           <div className="loading">Cargando docentes...</div>
         ) : docentes.length === 0 ? (
           <div className="empty-state">
-            <p>No hay docentes registrados aún.</p>
+            <p>No hay docentes registrados aun.</p>
           </div>
         ) : (
           <div className="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Cédula</th>
+                  <th>Cedula</th>
                   <th>Nombre</th>
                   <th>Email</th>
                   <th>Tipo</th>
@@ -160,9 +226,9 @@ export default function Docentes() {
                       </span>
                     </td>
                     <td style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn-secondary" onClick={() => abrirEditar(doc)}>✏️ Editar</button>
+                      <button className="btn btn-secondary" onClick={() => abrirEditar(doc)}>Editar</button>
                       {doc.activo && (
-                        <button className="btn btn-danger" onClick={() => desactivar(doc)}>🗑️</button>
+                        <button className="btn btn-danger" onClick={() => desactivar(doc)}>Desactivar</button>
                       )}
                     </td>
                   </tr>
@@ -178,32 +244,56 @@ export default function Docentes() {
           <div className="modal">
             <div className="modal-header">
               <h2>{editando ? 'Editar docente' : 'Nuevo docente'}</h2>
-              <button className="modal-close" onClick={() => setModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setModal(false)}>x</button>
             </div>
 
             {error && <div className="alert alert-error">{error}</div>}
 
             <div className="form-row">
               <div className="form-group">
-                <label>Nombre</label>
-                <input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} placeholder="Juan" />
+                <label>Nombre *</label>
+                <input
+                  value={form.nombre}
+                  onChange={e => setForm({...form, nombre: e.target.value})}
+                  onKeyDown={soloLetras}
+                  placeholder="Juan"
+                  maxLength={100}
+                />
               </div>
               <div className="form-group">
-                <label>Apellido</label>
-                <input value={form.apellido} onChange={e => setForm({...form, apellido: e.target.value})} placeholder="Pérez" />
+                <label>Apellido *</label>
+                <input
+                  value={form.apellido}
+                  onChange={e => setForm({...form, apellido: e.target.value})}
+                  onKeyDown={soloLetras}
+                  placeholder="Perez"
+                  maxLength={100}
+                />
               </div>
             </div>
 
             {!editando && (
               <div className="form-group">
-                <label>Cédula</label>
-                <input value={form.cedula} onChange={e => setForm({...form, cedula: e.target.value})} placeholder="1234567890" maxLength={10} />
+                <label>Cedula * (10 digitos)</label>
+                <input
+                  value={form.cedula}
+                  onChange={e => setForm({...form, cedula: e.target.value})}
+                  onKeyDown={soloNumeros}
+                  placeholder="1234567890"
+                  maxLength={10}
+                  inputMode="numeric"
+                />
               </div>
             )}
 
             <div className="form-group">
-              <label>Email</label>
-              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="docente@itq.edu.ec" />
+              <label>Email *</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => setForm({...form, email: e.target.value})}
+                placeholder="docente@itq.edu.ec"
+              />
             </div>
 
             <div className="form-row">
@@ -215,8 +305,13 @@ export default function Docentes() {
                 </select>
               </div>
               <div className="form-group">
-                <label>Título</label>
-                <input value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} placeholder="Ing. en Sistemas" />
+                <label>Titulo (opcional)</label>
+                <input
+                  value={form.titulo}
+                  onChange={e => setForm({...form, titulo: e.target.value})}
+                  placeholder="Ing. en Sistemas"
+                  maxLength={200}
+                />
               </div>
             </div>
 
@@ -242,7 +337,7 @@ export default function Docentes() {
                           fontWeight: estaSeleccionado(dia, jornada) ? 700 : 400,
                         }}
                       >
-                        {dia.slice(0,3)} {jornada.slice(0,3)}
+                        {dia.slice(0, 3)} {jornada.slice(0, 3)}
                       </button>
                     ))
                   )}

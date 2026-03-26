@@ -362,3 +362,206 @@ async def generar_horarios_automatico(data: GenerarHorarioRequest, db: AsyncSess
         "creados": creados,
         "errores": errores
     }
+
+# ─── GENERACIÓN CON IA ────────────────────────────────────────────────────────
+
+async def _construir_contexto_ia(data, modulo, db: AsyncSession) -> dict:
+    """
+    Recopila toda la informacion necesaria para que Claude pueda sugerir horarios.
+    Incluye asignaturas, docentes, disponibilidad y carga actual.
+    """
+    from models.models import Nivel, DisponibilidadDocente
+
+    # Carrera
+    r = await db.execute(select(Carrera).where(Carrera.id == data.carrera_id))
+    carrera = r.scalar_one_or_none()
+
+    # Niveles de la carrera
+    r = await db.execute(
+        select(Nivel).where(Nivel.carrera_id == data.carrera_id).order_by(Nivel.numero)
+    )
+    niveles = r.scalars().all()
+
+    # Asignaturas del modulo (con nivel y paralelos)
+    asignaturas_contexto = []
+    for nivel in niveles:
+        r = await db.execute(
+            select(Asignatura).where(
+                and_(
+                    Asignatura.carrera_id == data.carrera_id,
+                    Asignatura.nivel_id == nivel.id,
+                    Asignatura.activo == True,
+                    Asignatura.numero_modulo == modulo.numero,
+                )
+            )
+        )
+        asigs = r.scalars().all()
+        paralelos = [chr(65 + i) for i in range(nivel.paralelos)]
+        for asig in asigs:
+            for paralelo in paralelos:
+                asignaturas_contexto.append({
+                    "id":            f"{asig.id}|{nivel.id}|{paralelo}",  # clave compuesta
+                    "asignatura_id": asig.id,
+                    "nivel_id":      nivel.id,
+                    "nivel_numero":  nivel.numero,
+                    "paralelo":      paralelo,
+                    "nombre":        asig.nombre,
+                    "horas_modulo":  asig.horas_modulo,
+                })
+
+    # Docentes activos con su carga actual y disponibilidad
+    r = await db.execute(select(Docente).where(Docente.activo == True))
+    docentes_db = r.scalars().all()
+
+    docentes_contexto = []
+    for doc in docentes_db:
+        # Contar asignaturas ya asignadas en este modulo
+        r = await db.execute(
+            select(func.count(Horario.id)).where(
+                and_(
+                    Horario.docente_id == doc.id,
+                    Horario.modulo_id  == data.modulo_id,
+                )
+            )
+        )
+        count = r.scalar() or 0
+
+        # Disponibilidad del docente
+        r = await db.execute(
+            select(DisponibilidadDocente).where(
+                and_(
+                    DisponibilidadDocente.docente_id == doc.id,
+                    DisponibilidadDocente.disponible == True,
+                )
+            )
+        )
+        disps = r.scalars().all()
+        disponibilidad = [f"{d.dia.value}-{d.jornada.value}" for d in disps]
+
+        docentes_contexto.append({
+            "id":                   doc.id,
+            "nombre":               f"{doc.nombre} {doc.apellido}",
+            "tipo":                 doc.tipo.value,
+            "asignaturas_actuales": count,
+            "disponibilidad":       disponibilidad,
+        })
+
+    return {
+        "carrera":       carrera.nombre if carrera else data.carrera_id,
+        "modulo_numero": modulo.numero,
+        "asignaturas":   asignaturas_contexto,
+        "docentes":      docentes_contexto,
+    }
+
+
+async def generar_horarios_con_ia(data, db: AsyncSession) -> dict:
+    """
+    Genera horarios usando Claude como motor de planificacion inteligente.
+    1. Recopila el contexto completo del modulo.
+    2. Envia el contexto a Claude via API.
+    3. Aplica las asignaciones sugeridas con las mismas validaciones del sistema.
+    """
+    from services.ia_service import solicitar_sugerencia_ia
+    from models.models import Nivel
+
+    # Obtener modulo
+    r = await db.execute(select(Modulo).where(Modulo.id == data.modulo_id))
+    modulo = r.scalar_one_or_none()
+    if not modulo:
+        raise HTTPException(status_code=404, detail="Modulo no encontrado")
+
+    # Construir contexto para la IA
+    contexto = await _construir_contexto_ia(data, modulo, db)
+
+    if not contexto["asignaturas"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No hay asignaturas en el Modulo {modulo.numero} para esta carrera"
+        )
+    if not contexto["docentes"]:
+        raise HTTPException(status_code=400, detail="No hay docentes activos registrados")
+
+    # Consultar a Claude
+    plan = await solicitar_sugerencia_ia(contexto)
+
+    # Mapa rapido de asignaturas por clave compuesta
+    asig_map = {a["id"]: a for a in contexto["asignaturas"]}
+
+    creados = 0
+    errores = []
+    advertencias = []
+
+    for asignacion in plan.get("asignaciones", []):
+        asig_key    = asignacion.get("asignatura_id")
+        docente_id  = asignacion.get("docente_id")
+        dia         = asignacion.get("dia")
+        jornada_str = asignacion.get("jornada")
+        hora_inicio = asignacion.get("hora_inicio")
+        hora_fin    = asignacion.get("hora_fin")
+
+        # Validar que la IA devolvio datos completos
+        if not all([asig_key, docente_id, dia, jornada_str, hora_inicio, hora_fin]):
+            advertencias.append(f"Asignacion incompleta de la IA ignorada: {asignacion}")
+            continue
+
+        # Resolver clave compuesta
+        info = asig_map.get(asig_key)
+        if not info:
+            # La IA a veces devuelve solo el asignatura_id sin la clave compuesta
+            info = next((a for a in contexto["asignaturas"] if a["asignatura_id"] == asig_key), None)
+        if not info:
+            advertencias.append(f"Asignatura no reconocida en la sugerencia de IA: {asig_key}")
+            continue
+
+        # Validar jornada
+        try:
+            jornada = Jornada(jornada_str)
+        except ValueError:
+            advertencias.append(f"Jornada invalida '{jornada_str}' para {info['nombre']}, usando matutina")
+            jornada = Jornada.MATUTINA
+
+        # Intentar crear el horario con las validaciones del sistema
+        try:
+            await validar_choque_docente(data.modulo_id, docente_id, dia, hora_inicio, db)
+            await validar_choque_paralelo(
+                data.modulo_id, data.carrera_id, info["nivel_id"],
+                info["paralelo"], dia, hora_inicio, db
+            )
+            await validar_max_asignaturas_docente(data.modulo_id, docente_id, db)
+
+            horario = Horario(
+                id=str(uuid.uuid4()),
+                periodo_id=data.periodo_id,
+                modulo_id=data.modulo_id,
+                docente_id=docente_id,
+                asignatura_id=info["asignatura_id"],
+                carrera_id=data.carrera_id,
+                nivel_id=info["nivel_id"],
+                paralelo=info["paralelo"],
+                dia=dia,
+                jornada=jornada,
+                hora_inicio=hora_inicio,
+                hora_fin=hora_fin,
+                estado=EstadoHorario.BORRADOR,
+                generado_por_ia=True,  # marcado como generado por IA
+            )
+            db.add(horario)
+            await db.flush()
+            await _actualizar_carga_horaria(docente_id, data.periodo_id, data.modulo_id, db)
+            creados += 1
+
+        except HTTPException as e:
+            errores.append(
+                f"{info['nombre']} (Nivel {info['nivel_numero']}, Paralelo {info['paralelo']}): "
+                f"{e.detail}"
+            )
+
+    resumen_ia = plan.get("resumen", "Distribucion generada por IA")
+
+    return {
+        "mensaje":    f"Generacion con IA completada: {creados} horarios creados",
+        "creados":    creados,
+        "resumen_ia": resumen_ia,
+        "errores":    errores,
+        "advertencias": advertencias,
+    }

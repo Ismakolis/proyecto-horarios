@@ -54,10 +54,20 @@ export default function Asignaturas() {
     }
 
     const guardar = async () => {
-        if (!form.nombre || !form.nivel_id || !form.horas_modulo) {
-            setError('Nombre, nivel y horas son obligatorios')
+        const nombre = form.nombre.trim()
+        const horas = parseFloat(form.horas_modulo)
+
+        if (!nombre) { setError('El nombre de la asignatura es obligatorio'); return }
+        if (nombre.length < 2) { setError('El nombre debe tener al menos 2 caracteres'); return }
+        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-\.\(\)0-9,/]+$/.test(nombre)) {
+            setError('El nombre de la asignatura contiene caracteres no permitidos')
             return
         }
+        if (!form.nivel_id) { setError('Selecciona un nivel'); return }
+        if (!form.horas_modulo) { setError('Las horas del modulo son obligatorias'); return }
+        if (isNaN(horas) || horas <= 0) { setError('Las horas deben ser un numero mayor a 0'); return }
+        if (horas > 500) { setError('Las horas no pueden superar 500'); return }
+
         setGuardando(true)
         setError('')
         try {
@@ -281,6 +291,15 @@ export default function Asignaturas() {
                                 type="number"
                                 value={form.horas_modulo}
                                 onChange={e => setForm({ ...form, horas_modulo: e.target.value })}
+                                onKeyDown={e => {
+                                    if (!/[0-9.]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+                                        e.preventDefault()
+                                    }
+                                }}
+                                inputMode="decimal"
+                                placeholder="32"
+                                min="1"
+                                max="500" 
                                 placeholder="36 matutino / 27 nocturno"
                             />
                         </div>

@@ -12,3 +12,4 @@ python-dotenv==1.0.1
 pydantic==2.7.1
 pydantic-settings==2.2.1
 python-multipart==0.0.9
+# groq usa httpx que ya esta incluido

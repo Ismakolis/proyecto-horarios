@@ -186,7 +186,7 @@ export default function Horarios() {
   const [horarioEditando, setHorarioEditando] = useState(null)
 
   // Formulario de generacion
-  const [formGenerar, setFormGenerar]   = useState({ periodo_id: '', modulo_id: '', carrera_id: '' })
+  const [formGenerar, setFormGenerar]   = useState({ periodo_id: '', modulo_id: '', carrera_id: '', usar_ia: false })
   const [modulosGenerar, setModulosGenerar] = useState([])
 
   // Formulario de edicion manual
@@ -273,7 +273,7 @@ export default function Horarios() {
         periodo_id: formGenerar.periodo_id,
         modulo_id:  formGenerar.modulo_id,
         carrera_id: formGenerar.carrera_id,
-        usar_ia: false,
+        usar_ia:    formGenerar.usar_ia,
       })
       setResultado(res.data)
       cargarHorarios()
@@ -521,6 +521,11 @@ export default function Horarios() {
                 <div className={`alert ${resultado.errores?.length === 0 ? 'alert-success' : 'alert-warning'}`}>
                   {resultado.mensaje}
                 </div>
+                {resultado.resumen_ia && (
+                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}>
+                    <strong>Estrategia de IA:</strong> {resultado.resumen_ia}
+                  </div>
+                )}
                 {resultado.errores?.length > 0 && (
                   <div style={{ marginTop: 12 }}>
                     <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Advertencias:</p>
@@ -565,6 +570,43 @@ export default function Horarios() {
                     {carreras.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                   </select>
                 </div>
+                {/* Toggle de IA */}
+                <div style={{
+                  background: formGenerar.usar_ia ? '#f0f9ff' : '#f8fafc',
+                  border: `1.5px solid ${formGenerar.usar_ia ? '#0ea5e9' : '#e5e7eb'}`,
+                  borderRadius: 10,
+                  padding: '14px 16px',
+                  marginBottom: 16,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }} onClick={() => setFormGenerar({ ...formGenerar, usar_ia: !formGenerar.usar_ia })}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 22, borderRadius: 11,
+                      background: formGenerar.usar_ia ? '#0ea5e9' : '#cbd5e1',
+                      position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 3,
+                        left: formGenerar.usar_ia ? 20 : 3,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: '#fff', transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }} />
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: 13, color: formGenerar.usar_ia ? '#0369a1' : '#374151', margin: 0 }}>
+                        {formGenerar.usar_ia ? 'Usando IA (Claude)' : 'Usar IA para distribucion inteligente'}
+                      </p>
+                      <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0 0' }}>
+                        {formGenerar.usar_ia
+                          ? 'Claude analizara docentes, disponibilidades y cargas para proponer la mejor distribucion'
+                          : 'Activar para que Claude sugiera la distribucion optima de docentes y horarios'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="alert alert-warning">
                   Se generaran horarios para todas las asignaturas del modulo seleccionado.
                   Si ya existen horarios previos, pueden generarse conflictos.
